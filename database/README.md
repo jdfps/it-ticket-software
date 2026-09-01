@@ -116,52 +116,6 @@ One technician can be assigned multiple tickets.
 
 Each ticket can be assigned to one technician.
 
-```text
-TECHNICIANS
-      |
-      | 1
-      |
-      | Many
-      v
-   TICKETS
-```
-
-A ticket does not have to immediately have a technician assigned to it. Because of this, `technician_id` is allowed to be `NULL`.
-
----
-
-## Example
-
-An employee named John Smith creates a ticket because his computer will not start.
-
-The user might have:
-
-```text
-user_id = 5
-```
-
-When the ticket is created, the `TICKETS` table could contain:
-
-```text
-ticket_id       = 12
-user_id         = 5
-technician_id   = NULL
-title           = Computer Will Not Start
-description     = My computer will not turn on after pressing the power button.
-enter_date      = 2026-09-01 12:30:00
-due_date        = 2026-09-03 17:00:00
-```
-
-Later, technician `3` is assigned to the ticket:
-
-```text
-technician_id = 3
-```
-
-The ticket is now connected to both the employee who submitted it and the technician responsible for handling it.
-
----
-
 ## Current Database Structure
 
 ```text
