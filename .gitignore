@@ -1,13 +1,20 @@
-# python virtual env
-backend/.venv/
+# Python virtual environments
+.venv/
+venv/
 
-# python cache
+# Python cache
 __pycache__/
 *.pyc
 
-# environment variables / secrets
+# Environment variables / secrets
 .env
-*.env
 
-# vscode
+# VS Code
 .vscode/
+
+# PyCharm
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
