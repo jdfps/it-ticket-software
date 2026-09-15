@@ -1,11 +1,27 @@
-from fastapi import FastAPi
+from fastapi import FastAPI
+from app.database import engine
+from sqlalchemy import text
 
 
-app = FastAPi()
+# create instance of app!
+app = FastAPI()
 
 
-
-
+# this is the root "home"
 @app.get("/")
 def root():
-    return {"msg" : "Hello World"}
+    try:
+        with engine.connect() as connection:
+            connection.execute(
+                text("SELECT 1")
+            )
+            return {
+                "status" : "success",
+                "msg " : "Database Connected Successfully"
+            }
+
+    except Exception as e:
+        return {
+            "status" : "Error",
+            "msg" : str(e)
+        }
