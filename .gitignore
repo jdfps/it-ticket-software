@@ -1,20 +1,44 @@
-# Python virtual environments
-.venv/
+# =========================
+# Python / FastAPI
+# =========================
+
 venv/
-
-# Python cache
+.venv/
 __pycache__/
-*.pyc
+*.py[cod]
 
-# Environment variables / secrets
+# =========================
+# Environment Variables
+# =========================
+
 .env
+.env.*
+!.env.example
 
-# VS Code
+# =========================
+# React / Node
+# =========================
+
+node_modules/
+dist/
+
+# =========================
+# IDE / Editor
+# =========================
+
 .vscode/
-
-# PyCharm
 .idea/
 
-# Operating system files
+# =========================
+# Operating System
+# =========================
+
 .DS_Store
 Thumbs.db
+
+# =========================
+# Logs
+# =========================
+
+*.log
+npm-debug.log*

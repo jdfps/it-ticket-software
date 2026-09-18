@@ -10,7 +10,7 @@ create table users(
     first_name varchar(255) not null,
     last_name varchar(255) not null,
     email varchar(255) unique not null,
-    password varchar(255) not null,
+    password varchar(255),
 
     # user can be any of these roles
     role enum('employee', 'technician', 'admin') not null default 'employee',
