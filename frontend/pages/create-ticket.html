@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Support Ticket - Cloud IT Desk</title>
+    
+    <!-- Fonts & FontAwesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            accent: '#38bdf8',
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        heading: ['Space Grotesk', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom animations & fine-tuned styles */
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            background-image: radial-gradient(circle at 10% 10%, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 1) 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+
+        .input-field {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+        }
+
+        .input-error {
+            border-color: #f87171 !important;
+            box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.15) !important;
+        }
+
+        
+        /* Custom File Drag & Drop */
+        .drag-active {
+            border-color: #38bdf8 !important;
+            background-color: rgba(56, 189, 248, 0.08) !important;
+        }
+
+        /* Dynamic Toast Notification */
+        #toast {
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        #toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="flex flex-col font-sans antialiased">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+            
+            <!-- Branding -->
+            <div class="flex items-center space-x-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
+                    <!--Subject to Change: image in top left-->
+                    <i class="fa-solid fa-cloud-bolt text-lg"></i>
+                </div>
+                <div>
+                    <span class="font-heading text-xl font-bold tracking-tight text-white">Cloud IT <span class="text-sky-400">Desk</span></span>
+
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center space-x-1">
+                <a href="#" class="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-chart-pie mr-1.5 text-slate-400"></i> Dashboard
+                </a>
+                <a href="#" class="rounded-lg bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-400 border border-sky-500/20">
+                    <i class="fa-solid fa-circle-plus mr-1.5 text-sky-400"></i> Create Ticket
+                </a>
+                <a href="#" class="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-list-check mr-1.5 text-slate-400"></i> My Tickets
+                </a>
+            </nav>
+
+            <!-- User Profile & Status -->
+            <div class="flex items-center space-x-4">
+                <div class="hidden sm:flex flex-col text-right">
+                    <!--Subject to Change: Login Name Top Left-->
+                    <span class="text-sm font-semibold text-slate-200">John Doe</span>
+                    <!--Subject to Change: Login Account Type Top Left-->
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-circle text-[8px] text-emerald-400 mr-1"></i> Logged in as: <strong class="text-slate-300 font-normal">Employee</strong></span>
+                </div>
+                
+                <div class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 border border-slate-700 text-sky-400 font-bold text-sm">
+                    SJ
+                </div>
+
+                <button title="Log Out" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-rose-400 transition">
+                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
+        
+        <!-- Breadcrumb & Page Header -->
+        <div class="mb-8">
+            <nav class="flex text-sm text-slate-400 mb-2" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                    <li><a href="#" class="hover:text-slate-200 transition">Home</a></li>
+                    <li><i class="fa-solid fa-chevron-right text-xs mx-1 text-slate-600"></i></li>
+                    <li><a href="#" class="hover:text-slate-200 transition">Tickets</a></li>
+                    <li><i class="fa-solid fa-chevron-right text-xs mx-1 text-slate-600"></i></li>
+                    <li class="text-sky-400 font-medium">New Support Request</li>
+                </ol>
+            </nav>
+            
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="font-heading text-3xl font-bold tracking-tight text-white">Create Support Ticket</h1>
+                    <p class="mt-1 text-sm text-slate-400">Submit a detailed technical request to your internal IT team for immediate resolution.</p>
+                </div>
+                
+                <!-- SLA Notice Tag -->
+                <div class="inline-flex items-center rounded-lg bg-slate-800/80 px-3 py-2 border border-slate-700 text-xs text-slate-300 self-start sm:self-auto">
+                    <i class="fa-solid fa-clock text-sky-400 mr-2"></i>
+                    <span>Target First Response: <strong class="text-white font-semibold">&lt; 2 Hours</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Glass Card -->
+        <div class="glass-card rounded-2xl shadow-2xl p-6 sm:p-8">
+            
+            <!-- Global Form Error Alert (Hidden by default) -->
+            <div id="errorAlert" class="hidden mb-6 rounded-xl bg-rose-500/10 border border-rose-500/30 p-4 text-rose-400 text-sm flex items-start space-x-3">
+                <i class="fa-solid fa-triangle-exclamation text-lg mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <span class="font-semibold block mb-0.5">Please fix the highlighted errors before submitting:</span>
+                    <ul id="errorList" class="list-disc list-inside text-xs text-rose-300 space-y-0.5"></ul>
+                </div>
+            </div>
+
+            <form id="ticketForm" class="space-y-6" novalidate>
+                
+                <!-- 1. Ticket Title -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label for="ticketTitle" class="block text-sm font-medium text-slate-200">
+                            Ticket Title <span class="text-rose-400">*</span>
+                        </label>
+                        <span class="text-xs text-slate-500">Keep it short & concise</span>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="ticketTitle" name="title" required
+                            class="input-field w-full rounded-xl px-4 py-3 pl-11 text-sm placeholder-slate-500"
+                            placeholder="e.g., Laptop screen flickers during Zoom video calls">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-pen-heading text-sm"></i>
+                        </div>
+                    </div>
+                    <span id="titleError" class="text-xs text-rose-400 mt-1 hidden block">Title is required (minimum 10 characters).</span>
+                </div>
+
+                <!-- 2. Category & Priority Grid -->
+                <div class="grid grid-cols-1 gap-6">
+                    
+                    <!-- Category Select -->
+                    <div>
+                        <label for="ticketCategory" class="block text-sm font-medium text-slate-200 mb-1.5">
+                            Category <span class="text-rose-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <select id="ticketCategory" name="category" required
+                                class="input-field w-full rounded-xl px-4 py-3 pl-11 pr-10 text-sm appearance-none cursor-pointer">
+                                <option value="" disabled selected>Select issue category...</option>
+                                <option value="Hardware">💻 Hardware & Workstations</option>
+                                <option value="Software">💿 Software & Applications</option>
+                                <option value="Network">🌐 Network, Wi-Fi & VPN</option>
+                                <option value="Account">🔑 Account & Access Permissions</option>
+                                <option value="Other">❓ Other / General Service Request</option>
+                            </select>
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-layer-group text-sm"></i>
+                            </div>
+                            <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                        <span id="categoryError" class="text-xs text-rose-400 mt-1 hidden block">Please select a valid ticket category.</span>
+                    </div>
+
+                    
+                    
+
+                </div>
+
+                <!-- 3. Detailed Description -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label for="ticketDescription" class="block text-sm font-medium text-slate-200">
+                            Detailed Description <span class="text-rose-400">*</span>
+                        </label>
+                        <span id="charCounter" class="text-xs text-slate-500">0 / 1000 chars</span>
+                    </div>
+                    <textarea id="ticketDescription" name="description" rows="5" required maxlength="1000"
+                        class="input-field w-full rounded-xl p-4 text-sm placeholder-slate-500 resize-y"
+                        placeholder="Please describe what happened, steps to reproduce the problem, error messages displayed, and any troubleshooting steps you've already attempted..."></textarea>
+                    <span id="descriptionError" class="text-xs text-rose-400 mt-1 hidden block">Please provide a detailed description (at least 20 characters).</span>
+                </div>
+
+                <!-- 4. File Attachment Drop Area -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-200 mb-1.5">
+                        Screenshots or Error Logs <span class="text-xs text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    
+                    <div id="dropZone" class="input-field rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/50 p-6 text-center cursor-pointer hover:border-slate-500 transition">
+                        <input type="file" id="fileAttachment" class="hidden" multiple accept="image/*,.pdf,.log,.txt">
+                        
+                        <div id="dropZoneContent" class="flex flex-col items-center justify-center space-y-2">
+                            <div class="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center text-sky-400 border border-slate-700">
+                                <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                            </div>
+                            <div class="text-sm text-slate-300">
+                                <span class="font-semibold text-sky-400 hover:underline">Click to upload</span> or drag and drop files here
+                            </div>
+                            <p class="text-xs text-slate-500">PNG, JPG, PDF, or TXT up to 10MB each</p>
+                        </div>
+
+                        <!-- Selected Files Preview List -->
+                        <div id="fileList" class="hidden mt-4 space-y-2 text-left"></div>
+                    </div>
+                </div>
+
+                <hr class="border-slate-800 my-6">
+
+                <!-- 5. Form Action Buttons -->
+                <div class="flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
+                    <button type="button" onclick="resetForm()" 
+                        class="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 hover:text-white transition flex items-center justify-center">
+                        <i class="fa-solid fa-rotate-left mr-2 text-xs"></i> Reset Form
+                    </button>
+                    
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <a href="#" class="w-full sm:w-auto px-5 py-3 rounded-xl text-slate-400 text-sm font-medium hover:text-slate-200 transition text-center">
+                            Cancel
+                        </a>
+                        
+                        <button type="submit" id="submitBtn" 
+                            class="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-sky-500/25 transition transform active:scale-95 flex items-center justify-center">
+                            <i class="fa-solid fa-paper-plane mr-2"></i> Submit Ticket
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+    </main>
+
+    <!-- Floating Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center space-x-3 rounded-2xl bg-slate-800 border border-emerald-500/40 p-4 shadow-2xl text-white max-w-md">
+        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
+            <i class="fa-solid fa-circle-check text-xl"></i>
+        </div>
+        <div>
+            <h4 class="text-sm font-bold text-slate-100" id="toastTitle">Ticket #1042 Created!</h4>
+            <p class="text-xs text-slate-300" id="toastMessage">Your ticket was sent to the IT Queue. Redirecting to Dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Client-side Logic & Scripting -->
+    <script>
+        // DOM Elements
+        const form = document.getElementById('ticketForm');
+        const titleInput = document.getElementById('ticketTitle');
+        const categorySelect = document.getElementById('ticketCategory');
+        
+        const descriptionInput = document.getElementById('ticketDescription');
+        const charCounter = document.getElementById('charCounter');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileAttachment');
+        const fileList = document.getElementById('fileList');
+        const toast = document.getElementById('toast');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorList = document.getElementById('errorList');
+
+        // Character counter logic
+        descriptionInput.addEventListener('input', () => {
+            const length = descriptionInput.value.length;
+            charCounter.textContent = `${length} / 1000 chars`;
+            if (length >= 900) {
+                charCounter.classList.add('text-amber-400');
+            } else {
+                charCounter.classList.remove('text-amber-400');
+            }
+        });
+
+        
+
+        // File Drag & Drop Handlers
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-active');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-active');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            fileList.innerHTML = '';
+            fileList.classList.remove('hidden');
+
+            Array.from(files).forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between bg-slate-800/90 rounded-lg p-2.5 text-xs text-slate-200 border border-slate-700';
+                item.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate">
+                        <i class="fa-solid fa-paperclip text-sky-400"></i>
+                        <span class="truncate font-medium">${file.name}</span>
+                        <span class="text-slate-500">(${ (file.size / 1024).toFixed(1) } KB)</span>
+                    </div>
+                    <i class="fa-solid fa-check text-emerald-400 ml-2"></i>
+                `;
+                fileList.appendChild(item);
+            });
+        }
+
+        // Reset form functionality
+        function resetForm() {
+            form.reset();
+            charCounter.textContent = '0 / 1000 chars';
+            
+            fileList.innerHTML = '';
+            fileList.classList.add('hidden');
+            errorAlert.classList.add('hidden');
+            
+            // Clear errors
+            [titleInput, categorySelect, descriptionInput].forEach(el => el.classList.remove('input-error'));
+            document.querySelectorAll('[id$="Error"]').forEach(el => el.classList.add('hidden'));
+        }
+
+        // Live Form Validation & Submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            let isValid = true;
+            const errors = [];
+
+            // Reset Error Displays
+            errorAlert.classList.add('hidden');
+            errorList.innerHTML = '';
+            [titleInput, categorySelect, descriptionInput].forEach(el => el.classList.remove('input-error'));
+            document.querySelectorAll('[id$="Error"]').forEach(el => el.classList.add('hidden'));
+
+            // Validate Title
+            if (!titleInput.value.trim() || titleInput.value.trim().length < 10) {
+                titleInput.classList.add('input-error');
+                document.getElementById('titleError').classList.remove('hidden');
+                errors.push('Ticket title must be at least 10 characters long.');
+                isValid = false;
+            }
+
+            // Validate Category
+            if (!categorySelect.value) {
+                categorySelect.classList.add('input-error');
+                document.getElementById('categoryError').classList.remove('hidden');
+                errors.push('Please select a ticket category.');
+                isValid = false;
+            }
+
+            // Validate Description
+            if (!descriptionInput.value.trim() || descriptionInput.value.trim().length < 20) {
+                descriptionInput.classList.add('input-error');
+                document.getElementById('descriptionError').classList.remove('hidden');
+                errors.push('Description must provide at least 20 characters of detail.');
+                isValid = false;
+            }
+
+            if (!isValid) {
+                // Show Error Banner
+                errors.forEach(err => {
+                    const li = document.createElement('li');
+                    li.textContent = err;
+                    errorList.appendChild(li);
+                });
+                errorAlert.classList.remove('hidden');
+                return;
+            }
+
+            // Simulate Successful Creation
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...`;
+
+            setTimeout(() => {
+                // Generate random ticket number
+                const newTicketNum = Math.floor(1000 + Math.random() * 9000);
+                document.getElementById('toastTitle').textContent = `Ticket #${newTicketNum} Created!`;
+                
+                // Show Toast
+                toast.classList.add('show');
+
+                submitBtn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Created!`;
+                submitBtn.classList.replace('from-sky-500', 'from-emerald-500');
+                submitBtn.classList.replace('to-blue-600', 'to-emerald-600');
+
+                // Simulate redirect after 2.5s
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    resetForm();
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i> Submit Ticket`;
+                    submitBtn.classList.replace('from-emerald-500', 'from-sky-500');
+                    submitBtn.classList.replace('to-emerald-600', 'to-blue-600');
+                }, 3000);
+
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
