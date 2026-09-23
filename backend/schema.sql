@@ -1,91 +1,217 @@
-drop database if exists TMS;
+DROP DATABASE IF EXISTS TMS;
 
-create database TMS;
+CREATE DATABASE TMS;
 
-use TMS;
+USE TMS;
 
 
-create table users(
-    user_id int auto_increment primary key,
-    first_name varchar(255) not null,
-    last_name varchar(255) not null,
-    email varchar(255) unique not null,
-    password varchar(255),
+-- =========================================================
+-- USERS
+-- Employees, Technicians, and Admins all live in this table
+-- =========================================================
 
-    # user can be any of these roles
-    role enum('employee', 'technician', 'admin') not null default 'employee',
+CREATE TABLE users
+(
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
 
-    created_at timestamp default current_timestamp
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+
+    email VARCHAR(255) UNIQUE NOT NULL,
+
+    -- Store the HASHED password, never the plain-text password
+    password_hash VARCHAR(255) NOT NULL,
+
+    -- Determines which dashboard / permissions the user gets
+    role ENUM(
+        'employee',
+        'technician',
+        'admin'
+    ) NOT NULL DEFAULT 'employee',
+
+    -- Admin-created users start with a temporary password.
+    -- After they create their real password this becomes FALSE.
+    must_change_password BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 
-create table categories(
-    category_id int auto_increment primary key,
-    category_name varchar(255) unique not null
+-- =========================================================
+-- CATEGORIES
+-- Categories employees can select when creating tickets
+-- =========================================================
+
+CREATE TABLE categories
+(
+    category_id INT AUTO_INCREMENT PRIMARY KEY,
+
+    category_name VARCHAR(255) UNIQUE NOT NULL
 );
 
 
-create table ticket(
-    ticket_id int auto_increment primary key,
+-- =========================================================
+-- TICKETS
+-- Main support ticket table
+-- =========================================================
 
-    # user who created the ticket
-    user_id int not null,
+CREATE TABLE tickets
+(
+    ticket_id INT AUTO_INCREMENT PRIMARY KEY,
 
-    # technician assigned to the ticket
-    # can be NULL because a new ticket may not have a technician yet
-    tech_id int,
+    -- Employee who created the ticket
+    user_id INT NOT NULL,
 
-    # category that this ticket belongs to
-    category_id int not null,
+    -- Technician who claimed the ticket
+    -- NULL means nobody has claimed it yet
+    tech_id INT NULL,
 
-    title varchar(1024) not null,
-    description varchar(1024) not null,
+    -- Ticket category
+    category_id INT NOT NULL,
 
-    # current state of the ticket
-    status enum('open', 'in_progress', 'resolved', 'closed')
-        not null default 'open',
+    title VARCHAR(255) NOT NULL,
 
-    # integer value 1-30 for how many days it should take to complete
-    priority int not null,
-
-    created_at timestamp default current_timestamp,
-
-    # date the ticket should be completed by
-    due_date datetime,
-
-    # gets timestamp when ticket is resolved
-    resolved_at timestamp null,
+    description TEXT NOT NULL,
 
 
-    # foreign key for the user who posted the ticket
-    foreign key (user_id) references users(user_id),
+    -- =====================================================
+    -- TICKET WORKFLOW
+    --
+    -- pending:
+    -- Employee submitted it, waiting for admin
+    --
+    -- open:
+    -- Admin approved it and assigned priority.
+    -- Technicians can now see/claim it.
+    --
+    -- in_progress:
+    -- Technician claimed the ticket.
+    --
+    -- resolved:
+    -- Technician completed the ticket.
+    --
+    -- rejected:
+    -- Admin rejected the ticket.
+    -- =====================================================
 
-    # foreign key for the technician assigned to the ticket
-    # tech_id references a user whose role should be 'technician'
-    foreign key (tech_id) references users(user_id),
+    status ENUM(
+        'pending',
+        'open',
+        'in_progress',
+        'resolved',
+        'rejected'
+    ) NOT NULL DEFAULT 'pending',
 
-    # foreign key for the category this ticket belongs to
-    foreign key (category_id) references categories(category_id)
+
+    -- =====================================================
+    -- PRIORITY
+    --
+    -- NULL while waiting for admin review
+    --
+    -- P1 = 1 day
+    -- P2 = 2 days
+    -- P3 = 3 days
+    -- P4 = 4 days
+    -- P5 = 5 days
+    -- =====================================================
+
+    priority TINYINT NULL,
+
+
+    -- When employee submitted the ticket
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Set when admin approves ticket and assigns priority
+    due_date DATETIME NULL,
+
+    -- Set when technician resolves ticket
+    resolved_at DATETIME NULL,
+
+
+    -- =====================================================
+    -- FOREIGN KEYS
+    -- =====================================================
+
+    CONSTRAINT fk_ticket_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id),
+
+    CONSTRAINT fk_ticket_technician
+        FOREIGN KEY (tech_id)
+        REFERENCES users(user_id),
+
+    CONSTRAINT fk_ticket_category
+        FOREIGN KEY (category_id)
+        REFERENCES categories(category_id),
+
+    -- Priority can either be NULL (pending/rejected)
+    -- or a number from 1-5
+    CONSTRAINT chk_ticket_priority
+        CHECK (
+            priority IS NULL
+            OR priority BETWEEN 1 AND 5
+        )
 );
 
 
-create table comments(
-    comment_id int auto_increment primary key,
+-- =========================================================
+-- COMMENTS
+-- Employee and Technician conversation on a ticket
+-- =========================================================
 
-    # ticket that this comment was posted on
-    ticket_id int not null,
+CREATE TABLE comments
+(
+    comment_id INT AUTO_INCREMENT PRIMARY KEY,
 
-    # user who posted the comment
-    # can be employee, technician, or admin
-    author_id int not null,
+    -- Ticket this comment belongs to
+    ticket_id INT NOT NULL,
 
-    comment_text varchar(1024) not null,
-    created_at timestamp default current_timestamp,
+    -- User who wrote the comment
+    author_id INT NOT NULL,
+
+    comment_text TEXT NOT NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 
-    # foreign key for which ticket this comment belongs to
-    foreign key (ticket_id) references ticket(ticket_id),
+    CONSTRAINT fk_comment_ticket
+        FOREIGN KEY (ticket_id)
+        REFERENCES tickets(ticket_id),
 
-    # foreign key for the user who posted the comment
-    foreign key (author_id) references users(user_id)
+    CONSTRAINT fk_comment_author
+        FOREIGN KEY (author_id)
+        REFERENCES users(user_id)
 );
+
+
+-- =========================================================
+-- INDEXES
+-- Makes common ticket searches faster
+-- =========================================================
+
+CREATE INDEX idx_tickets_user
+    ON tickets(user_id);
+
+CREATE INDEX idx_tickets_technician
+    ON tickets(tech_id);
+
+CREATE INDEX idx_tickets_status
+    ON tickets(status);
+
+CREATE INDEX idx_comments_ticket
+    ON comments(ticket_id);
+
+
+-- =========================================================
+-- DEFAULT CATEGORIES
+-- Change/add these later if needed
+-- =========================================================
+
+INSERT INTO categories (category_name)
+VALUES
+    ('Hardware'),
+    ('Software'),
+    ('Network'),
+    ('Account / Access'),
+    ('Email'),
+    ('Other');
