@@ -1,136 +1,73 @@
 import { useState } from "react";
 import {
   CloudLightning,
-  PieChart,
+  LayoutDashboard,
   PlusCircle,
-  ListChecks,
   LogOut,
-  ChevronDown,
   Clock,
+  CircleDot,
+  Wrench,
   CheckCircle2,
+  XCircle,
+  Ticket,
+  Calendar,
+  UserRound,
   AlertCircle,
+  ChevronRight,
+  ArrowLeft,
   MessageSquare,
-  CalendarPlus,
-  Inbox,
-  ArrowRight,
+  Send,
 } from "lucide-react";
 
-const INITIAL_TICKETS = [
-  {
-    id: 1042,
-    title: "Unable to connect to company VPN",
-    category: "Network",
-    status: "In Progress",
-    priority: "P2",
-    createdAt: "2026-09-21T09:30:00",
-    description:
-      "I am unable to connect to the company VPN from my laptop. The connection times out after entering my credentials.",
-    technician: "Alex Rivera",
-    comments: [
-      {
-        id: 1,
-        author: "Alex Rivera",
-        text: "I am looking into the VPN issue now. Please confirm whether this happens on both Wi-Fi and Ethernet.",
-        timestamp: "2026-09-21T10:15:00",
-      },
-    ],
-  },
-  {
-    id: 1038,
-    title: "Microsoft Office activation error",
-    category: "Software",
-    status: "Open",
-    priority: "P3",
-    createdAt: "2026-09-20T14:10:00",
-    description:
-      "Microsoft Word is showing an activation error when I open the application.",
-    technician: null,
-    comments: [],
-  },
-  {
-    id: 1029,
-    title: "Monitor flickering intermittently",
-    category: "Hardware",
-    status: "Resolved",
-    priority: "P4",
-    createdAt: "2026-09-16T11:45:00",
-    resolvedAt: "2026-09-17T13:20:00",
-    description:
-      "My second monitor flickers every few minutes while connected through the docking station.",
-    technician: "Jordan Lee",
-    comments: [
-      {
-        id: 1,
-        author: "Jordan Lee",
-        text: "The docking station cable was replaced and the monitor is now functioning normally.",
-        timestamp: "2026-09-17T13:20:00",
-      },
-    ],
-  },
-];
-
-const PRIORITY_META = {
-  P1: {
-    label: "P1 · Urgent",
-    dot: "bg-rose-400",
-    text: "text-rose-300",
-    bg: "bg-rose-500/10",
-    ring: "ring-rose-400/30",
-  },
-  P2: {
-    label: "P2 · High",
-    dot: "bg-orange-400",
-    text: "text-orange-300",
-    bg: "bg-orange-500/10",
-    ring: "ring-orange-400/30",
-  },
-  P3: {
-    label: "P3 · Medium",
-    dot: "bg-amber-400",
-    text: "text-amber-300",
-    bg: "bg-amber-500/10",
-    ring: "ring-amber-400/30",
-  },
-  P4: {
-    label: "P4 · Low",
-    dot: "bg-sky-400",
-    text: "text-sky-300",
-    bg: "bg-sky-500/10",
-    ring: "ring-sky-400/30",
-  },
-  P5: {
-    label: "P5 · Minimal",
-    dot: "bg-slate-400",
-    text: "text-slate-300",
-    bg: "bg-slate-500/10",
-    ring: "ring-slate-400/30",
-  },
-};
-
 const STATUS_META = {
-  Open: {
-    text: "text-sky-300",
-    bg: "bg-sky-500/10",
-    ring: "ring-sky-400/30",
+  pending: {
+    label: "Pending Admin Review",
+    icon: Clock,
+    className:
+      "bg-amber-500/10 text-amber-300 ring-amber-400/30",
   },
 
-  "In Progress": {
-    text: "text-indigo-300",
-    bg: "bg-indigo-500/10",
-    ring: "ring-indigo-400/30",
+  open: {
+    label: "Open",
+    icon: CircleDot,
+    className:
+      "bg-sky-500/10 text-sky-300 ring-sky-400/30",
   },
 
-  Resolved: {
-    text: "text-emerald-300",
-    bg: "bg-emerald-500/10",
-    ring: "ring-emerald-400/30",
+  in_progress: {
+    label: "In Progress",
+    icon: Wrench,
+    className:
+      "bg-indigo-500/10 text-indigo-300 ring-indigo-400/30",
+  },
+
+  resolved: {
+    label: "Resolved",
+    icon: CheckCircle2,
+    className:
+      "bg-emerald-500/10 text-emerald-300 ring-emerald-400/30",
+  },
+
+  rejected: {
+    label: "Rejected",
+    icon: XCircle,
+    className:
+      "bg-rose-500/10 text-rose-300 ring-rose-400/30",
   },
 };
+
+function formatDate(date) {
+  if (!date) return "—";
+
+  return new Date(date).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 function formatDateTime(date) {
-  if (!date) {
-    return "";
-  }
+  if (!date) return "—";
 
   return new Date(date).toLocaleString(undefined, {
     month: "short",
@@ -141,277 +78,540 @@ function formatDateTime(date) {
   });
 }
 
-function PriorityBadge({ priority }) {
-  const meta = PRIORITY_META[priority];
+function StatusBadge({ status }) {
+  const meta = STATUS_META[status] || STATUS_META.pending;
+  const Icon = meta.icon;
 
-  if (!meta) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${meta.className}`}
+    >
+      <Icon className="mr-1.5 h-3.5 w-3.5" />
+      {meta.label}
+    </span>
+  );
+}
+
+function PriorityBadge({ priorityDays }) {
+  if (!priorityDays) {
     return (
-      <span className="inline-flex items-center rounded-full bg-slate-700/50 px-2.5 py-1 text-xs font-medium text-slate-400 ring-1 ring-inset ring-slate-600/40">
+      <span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-400 ring-1 ring-slate-700">
         Pending Priority
       </span>
     );
   }
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${meta.bg} ${meta.text} ${meta.ring}`}
-    >
-      <span
-        className={`mr-1.5 h-1.5 w-1.5 rounded-full ${meta.dot}`}
-      />
-
-      {meta.label}
+    <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-300 ring-1 ring-sky-400/30">
+      P{priorityDays}
     </span>
   );
 }
 
-function StatusBadge({ status }) {
-  const meta = STATUS_META[status] || STATUS_META.Open;
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  description,
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400">
+          <Icon className="h-5 w-5" />
+        </div>
+
+        <span className="text-3xl font-bold text-white">
+          {value}
+        </span>
+      </div>
+
+      <p className="text-sm font-semibold text-slate-200">
+        {label}
+      </p>
+
+      <p className="mt-1 text-xs text-slate-500">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+// ================================================
+// TICKET LIST CARD
+// ================================================
+
+function TicketCard({
+  ticket,
+  onOpenTicket,
+}) {
+  const pastDue =
+    ticket.dueAt &&
+    new Date(ticket.dueAt) < new Date() &&
+    ticket.status !== "resolved";
+
+  const commentCount =
+    ticket.comments?.length || 0;
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${meta.bg} ${meta.text} ${meta.ring}`}
+    <button
+      type="button"
+      onClick={() => onOpenTicket(ticket.id)}
+      className={`w-full rounded-2xl border bg-slate-900/40 p-5 text-left transition hover:border-sky-500/30 hover:bg-slate-900/70 ${
+        pastDue
+          ? "border-rose-500/40"
+          : "border-slate-800"
+      }`}
     >
-      {status}
-    </span>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-500">
+              Ticket #{ticket.id}
+            </span>
+
+            <span className="text-slate-700">
+              •
+            </span>
+
+            <span className="text-xs text-slate-500">
+              {ticket.category}
+            </span>
+          </div>
+
+          <h3 className="text-base font-semibold text-white">
+            {ticket.title}
+          </h3>
+
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-400">
+            {ticket.description}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <PriorityBadge
+            priorityDays={ticket.priorityDays}
+          />
+
+          <StatusBadge
+            status={ticket.status}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 border-t border-slate-800 pt-4 sm:grid-cols-4">
+        <div>
+          <p className="text-xs text-slate-500">
+            Created
+          </p>
+
+          <p className="mt-1 text-sm text-slate-300">
+            {formatDate(ticket.createdAt)}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-500">
+            Technician
+          </p>
+
+          <p className="mt-1 text-sm text-slate-300">
+            {ticket.technicianName ||
+              "Not assigned"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-500">
+            Due
+          </p>
+
+          <p
+            className={`mt-1 text-sm ${
+              pastDue
+                ? "font-semibold text-rose-400"
+                : "text-slate-300"
+            }`}
+          >
+            {ticket.dueAt
+              ? formatDate(ticket.dueAt)
+              : "—"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-500">
+            Messages
+          </p>
+
+          <p className="mt-1 flex items-center text-sm text-slate-300">
+            <MessageSquare className="mr-1.5 h-3.5 w-3.5 text-sky-400" />
+            {commentCount}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex justify-end border-t border-slate-800 pt-4">
+        <span className="flex items-center text-sm font-semibold text-sky-400">
+          View Ticket
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </span>
+      </div>
+    </button>
   );
 }
 
-function StatCard({ label, value, icon: Icon, tone }) {
-  const toneMap = {
-    sky: "text-sky-400 bg-sky-500/10 border-sky-500/20",
-    indigo:
-      "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
-    emerald:
-      "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+// ================================================
+// TICKET DETAILS / CONVERSATION
+// ================================================
+
+function TicketDetails({
+  ticket,
+  user,
+  onBack,
+  onAddComment,
+}) {
+  const [message, setMessage] = useState("");
+
+  const pastDue =
+    ticket.dueAt &&
+    new Date(ticket.dueAt) < new Date() &&
+    ticket.status !== "resolved";
+
+  const canReply =
+    ticket.status === "in_progress" ||
+    ticket.status === "open";
+
+  const handleSend = (event) => {
+    event.preventDefault();
+
+    if (!message.trim()) {
+      return;
+    }
+
+    onAddComment(ticket.id, message);
+
+    setMessage("");
   };
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-400">
-            {label}
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-white">
-            {value}
-          </p>
-        </div>
-
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl border ${toneMap[tone]}`}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TicketRow({ ticket, expanded, onToggle }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/40 transition hover:border-slate-600">
+    <div>
       <button
         type="button"
-        onClick={() => onToggle(ticket.id)}
-        className="flex w-full items-center gap-4 px-5 py-4 text-left"
+        onClick={onBack}
+        className="mb-6 flex items-center text-sm font-medium text-slate-400 transition hover:text-sky-400"
       >
-        <ChevronDown
-          className={`h-4 w-4 flex-shrink-0 text-slate-500 transition-transform ${
-            expanded ? "rotate-180" : ""
-          }`}
-        />
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-slate-100">
-              {ticket.title}
-            </span>
-          </div>
-
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-            <span>Ticket #{ticket.id}</span>
-
-            <span>•</span>
-
-            <span>{ticket.category}</span>
-
-            <span className="flex items-center">
-              <CalendarPlus className="mr-1 h-3 w-3" />
-              {formatDateTime(ticket.createdAt)}
-            </span>
-          </div>
-        </div>
-
-        <div className="hidden flex-shrink-0 items-center gap-2 sm:flex">
-          <PriorityBadge priority={ticket.priority} />
-          <StatusBadge status={ticket.status} />
-        </div>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to My Tickets
       </button>
 
-      <div
-        className={`grid transition-all duration-300 ease-in-out ${
-          expanded
-            ? "grid-rows-[1fr] opacity-100"
-            : "grid-rows-[0fr] opacity-0"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="border-t border-slate-800 px-5 py-5">
-            {/* Mobile badges */}
-            <div className="mb-4 flex flex-wrap items-center gap-2 sm:hidden">
-              <PriorityBadge priority={ticket.priority} />
-              <StatusBadge status={ticket.status} />
-            </div>
+      {/* TICKET HEADER */}
+      <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="mb-2 text-sm text-slate-500">
+              Ticket #{ticket.id}
+            </p>
 
-            {/* Description */}
-            <div>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Description
-              </h4>
+            <h1 className="text-2xl font-bold text-white">
+              {ticket.title}
+            </h1>
 
-              <p className="text-sm leading-relaxed text-slate-300">
-                {ticket.description}
-              </p>
-            </div>
+            <p className="mt-2 text-sm text-slate-400">
+              {ticket.category}
+            </p>
+          </div>
 
-            {/* Technician */}
-            <div className="mt-5">
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Assigned Technician
-              </h4>
+          <div className="flex flex-wrap gap-2">
+            <PriorityBadge
+              priorityDays={ticket.priorityDays}
+            />
 
-              {ticket.technician ? (
-                <p className="text-sm font-medium text-slate-200">
-                  {ticket.technician}
-                </p>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Waiting for technician assignment
-                </p>
-              )}
-            </div>
-
-            {/* Resolution */}
-            {ticket.status === "Resolved" &&
-              ticket.resolvedAt && (
-                <div className="mt-5 flex items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                  <CheckCircle2 className="mr-2 h-4 w-4 flex-shrink-0" />
-
-                  Resolved {formatDateTime(ticket.resolvedAt)}
-                </div>
-              )}
-
-            {/* Comments */}
-            <div className="mt-6 border-t border-slate-800 pt-5">
-              <h4 className="mb-3 flex items-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
-                Comments & Updates
-              </h4>
-
-              {ticket.comments.length === 0 ? (
-                <p className="text-sm text-slate-500">
-                  No updates have been posted yet.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {ticket.comments.map((comment) => (
-                    <div
-                      key={comment.id}
-                      className="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3"
-                    >
-                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-xs font-semibold text-slate-200">
-                          {comment.author}
-                        </span>
-
-                        <span className="text-xs text-slate-500">
-                          {formatDateTime(comment.timestamp)}
-                        </span>
-                      </div>
-
-                      <p className="text-sm leading-relaxed text-slate-300">
-                        {comment.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <StatusBadge
+              status={ticket.status}
+            />
           </div>
         </div>
+
+        <div className="mt-6 grid gap-4 border-t border-slate-800 pt-5 sm:grid-cols-3">
+          <div>
+            <p className="flex items-center text-xs text-slate-500">
+              <Calendar className="mr-1.5 h-3.5 w-3.5" />
+              Created
+            </p>
+
+            <p className="mt-1 text-sm text-slate-300">
+              {formatDateTime(
+                ticket.createdAt
+              )}
+            </p>
+          </div>
+
+          <div>
+            <p className="flex items-center text-xs text-slate-500">
+              <UserRound className="mr-1.5 h-3.5 w-3.5" />
+              Technician
+            </p>
+
+            <p className="mt-1 text-sm text-slate-300">
+              {ticket.technicianName ||
+                "Not assigned yet"}
+            </p>
+          </div>
+
+          <div>
+            <p className="flex items-center text-xs text-slate-500">
+              <Clock className="mr-1.5 h-3.5 w-3.5" />
+              Due
+            </p>
+
+            <p
+              className={`mt-1 text-sm ${
+                pastDue
+                  ? "font-semibold text-rose-400"
+                  : "text-slate-300"
+              }`}
+            >
+              {ticket.dueAt
+                ? formatDateTime(
+                    ticket.dueAt
+                  )
+                : "Not assigned yet"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ORIGINAL REQUEST */}
+      <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Original Request
+        </p>
+
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+          {ticket.description}
+        </p>
+      </div>
+
+      {/* CONVERSATION */}
+      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
+        <div className="border-b border-slate-800 px-6 py-5">
+          <h2 className="flex items-center text-lg font-semibold text-white">
+            <MessageSquare className="mr-2 h-5 w-5 text-sky-400" />
+            Conversation
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Messages between you and the IT
+            technician.
+          </p>
+        </div>
+
+        {/* MESSAGES */}
+        <div className="space-y-4 p-6">
+          {!ticket.comments ||
+          ticket.comments.length === 0 ? (
+            <div className="py-8 text-center">
+              <MessageSquare className="mx-auto mb-3 h-7 w-7 text-slate-600" />
+
+              <p className="text-sm font-medium text-slate-300">
+                No messages yet
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Messages from your technician
+                will appear here.
+              </p>
+            </div>
+          ) : (
+            ticket.comments.map((comment) => {
+              const mine =
+                comment.userId === user.user_id;
+
+              return (
+                <div
+                  key={comment.id}
+                  className={`flex ${
+                    mine
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[70%] ${
+                      mine
+                        ? "bg-sky-500/15 ring-1 ring-sky-500/20"
+                        : "bg-slate-950 ring-1 ring-slate-800"
+                    }`}
+                  >
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`text-xs font-semibold ${
+                          mine
+                            ? "text-sky-300"
+                            : "text-slate-300"
+                        }`}
+                      >
+                        {mine
+                          ? "You"
+                          : comment.author}
+                      </span>
+
+                      {!mine && (
+                        <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-300">
+                          IT
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">
+                      {comment.text}
+                    </p>
+
+                    <p className="mt-2 text-[11px] text-slate-500">
+                      {formatDateTime(
+                        comment.timestamp
+                      )}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* REPLY */}
+        {canReply ? (
+          <form
+            onSubmit={handleSend}
+            className="border-t border-slate-800 bg-slate-950/30 p-4"
+          >
+            <p className="mb-2 text-xs font-medium text-slate-400">
+              Reply to your technician
+            </p>
+
+            <div className="flex gap-2">
+              <textarea
+                value={message}
+                onChange={(event) =>
+                  setMessage(
+                    event.target.value
+                  )
+                }
+                rows={2}
+                placeholder="Type your message..."
+                className="flex-1 resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-sky-400"
+              />
+
+              <button
+                type="submit"
+                disabled={!message.trim()}
+                className="flex items-center self-end rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="border-t border-slate-800 bg-slate-950/30 px-6 py-4">
+            <p className="text-center text-xs text-slate-500">
+              {ticket.status === "pending" &&
+                "Messaging will become available after your ticket is approved."}
+
+              {ticket.status === "resolved" &&
+                "This ticket has been resolved."}
+
+              {ticket.status === "rejected" &&
+                "This ticket was not approved."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+// ================================================
+// USER DASHBOARD
+// ================================================
+
 export default function UserDashboard({
-  user = {
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@company.com",
-    role: "employee",
-  },
+  user,
+  tickets = [],
+  onAddComment,
   onCreateTicket,
   onLogout,
 }) {
-  const [tickets] = useState(INITIAL_TICKETS);
-  const [expandedId, setExpandedId] = useState(null);
+  const [selectedTicketId, setSelectedTicketId] =
+    useState(null);
+
+  const selectedTicket =
+    tickets.find(
+      (ticket) =>
+        ticket.id === selectedTicketId
+    ) || null;
+
+  const pendingCount = tickets.filter(
+    (ticket) =>
+      ticket.status === "pending"
+  ).length;
 
   const openCount = tickets.filter(
-    (ticket) => ticket.status === "Open"
+    (ticket) =>
+      ticket.status === "open"
   ).length;
 
   const inProgressCount = tickets.filter(
-    (ticket) => ticket.status === "In Progress"
+    (ticket) =>
+      ticket.status === "in_progress"
   ).length;
 
   const resolvedCount = tickets.filter(
-    (ticket) => ticket.status === "Resolved"
+    (ticket) =>
+      ticket.status === "resolved"
   ).length;
 
-  const toggleTicket = (id) => {
-    setExpandedId((current) =>
-      current === id ? null : id
-    );
-  };
-
   const initials =
-    `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase();
+    `${user?.firstName?.[0] || ""}${
+      user?.lastName?.[0] || ""
+    }`.toUpperCase();
+
+  const sortedTickets = [
+    ...tickets,
+  ].sort(
+    (a, b) =>
+      new Date(b.createdAt) -
+      new Date(a.createdAt)
+  );
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-50 antialiased">
-      {/* Background */}
-      <div
-        className="pointer-events-none fixed inset-0 -z-10"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 10% 10%, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 1) 100%)",
-        }}
-      />
-
-      {/* Navigation */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          {/* Branding */}
+    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-50">
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
-              <CloudLightning className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600">
+              <CloudLightning className="h-5 w-5 text-white" />
             </div>
 
-            <span className="font-heading text-xl font-bold tracking-tight text-white">
-              Cloud IT <span className="text-sky-400">Desk</span>
+            <span className="text-xl font-bold text-white">
+              Cloud IT{" "}
+              <span className="text-sky-400">
+                Desk
+              </span>
             </span>
           </div>
 
-          {/* Navigation */}
-          <nav className="hidden items-center space-x-1 md:flex">
+          <nav className="hidden items-center gap-1 md:flex">
             <button
               type="button"
-              className="flex items-center rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-400"
+              onClick={() =>
+                setSelectedTicketId(null)
+              }
+              className="flex items-center rounded-lg bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-400"
             >
-              <PieChart className="mr-1.5 h-4 w-4" />
+              <LayoutDashboard className="mr-1.5 h-4 w-4" />
               Dashboard
             </button>
 
@@ -420,35 +620,24 @@ export default function UserDashboard({
               onClick={onCreateTicket}
               className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
             >
-              <PlusCircle className="mr-1.5 h-4 w-4 text-slate-400" />
+              <PlusCircle className="mr-1.5 h-4 w-4" />
               Create Ticket
-            </button>
-
-            <button
-              type="button"
-              className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
-            >
-              <ListChecks className="mr-1.5 h-4 w-4 text-slate-400" />
-              My Tickets
             </button>
           </nav>
 
-          {/* User Profile */}
-          <div className="flex items-center space-x-4">
-            <div className="hidden flex-col text-right sm:flex">
-              <span className="text-sm font-semibold text-slate-200">
-                {user.firstName} {user.lastName}
-              </span>
+          <div className="flex items-center gap-4">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-semibold text-slate-100">
+                {user?.firstName}{" "}
+                {user?.lastName}
+              </p>
 
-              <span className="text-xs text-slate-400">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-400 align-middle" />
-
+              <p className="text-xs text-slate-400">
                 Logged in as:{" "}
-
-                <strong className="font-normal capitalize text-slate-300">
-                  {user.role}
-                </strong>
-              </span>
+                <span className="capitalize text-slate-300">
+                  {user?.role}
+                </span>
+              </p>
             </div>
 
             <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-sky-400">
@@ -467,121 +656,148 @@ export default function UserDashboard({
         </div>
       </header>
 
-      {/* Main */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome */}
-        <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-1 text-sm font-medium text-sky-400">
-              Employee Dashboard
-            </p>
-
-            <h1 className="font-heading text-3xl font-bold tracking-tight text-white">
-              Welcome back, {user.firstName}
-            </h1>
-
-            <p className="mt-2 text-sm text-slate-400">
-              Track your support requests and view updates from the IT
-              team.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onCreateTicket}
-            className="flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition hover:from-sky-400 hover:to-blue-500 active:scale-95"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create New Ticket
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard
-            label="Open Tickets"
-            value={openCount}
-            icon={AlertCircle}
-            tone="sky"
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
+        {/* SHOW TICKET DETAILS */}
+        {selectedTicket ? (
+          <TicketDetails
+            ticket={selectedTicket}
+            user={user}
+            onBack={() =>
+              setSelectedTicketId(null)
+            }
+            onAddComment={onAddComment}
           />
-
-          <StatCard
-            label="In Progress"
-            value={inProgressCount}
-            icon={Clock}
-            tone="indigo"
-          />
-
-          <StatCard
-            label="Resolved"
-            value={resolvedCount}
-            icon={CheckCircle2}
-            tone="emerald"
-          />
-        </div>
-
-        {/* Tickets */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/30">
-          <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-white">
-                Recent Tickets
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-400">
-                View the status and latest updates for your support
-                requests.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="flex items-center text-sm font-medium text-sky-400 transition hover:text-sky-300"
-            >
-              View All Tickets
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="p-4 sm:p-5">
-            {tickets.length === 0 ? (
-              <div className="flex flex-col items-center px-6 py-14 text-center">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sky-400">
-                  <Inbox className="h-6 w-6" />
-                </div>
-
-                <h3 className="text-lg font-semibold text-white">
-                  No tickets yet
-                </h3>
-
-                <p className="mt-1 max-w-md text-sm text-slate-400">
-                  You haven't submitted any support requests yet.
+        ) : (
+          <>
+            {/* DASHBOARD HEADER */}
+            <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+              <div>
+                <p className="mb-1 text-sm font-medium text-sky-400">
+                  Employee Dashboard
                 </p>
 
-                <button
-                  type="button"
-                  onClick={onCreateTicket}
-                  className="mt-5 flex items-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:from-sky-400 hover:to-blue-500"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create Your First Ticket
-                </button>
+                <h1 className="text-3xl font-bold text-white">
+                  Welcome back,{" "}
+                  {user?.firstName}
+                </h1>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  View your support requests,
+                  communicate with technicians,
+                  or submit a new ticket.
+                </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {tickets.map((ticket) => (
-                  <TicketRow
-                    key={ticket.id}
-                    ticket={ticket}
-                    expanded={expandedId === ticket.id}
-                    onToggle={toggleTicket}
-                  />
-                ))}
+
+              <button
+                type="button"
+                onClick={onCreateTicket}
+                className="flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Ticket
+              </button>
+            </div>
+
+            {/* STATS */}
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                icon={Clock}
+                label="Pending Review"
+                value={pendingCount}
+                description="Waiting for admin approval"
+              />
+
+              <StatCard
+                icon={CircleDot}
+                label="Open"
+                value={openCount}
+                description="Waiting for a technician"
+              />
+
+              <StatCard
+                icon={Wrench}
+                label="In Progress"
+                value={inProgressCount}
+                description="Currently being worked"
+              />
+
+              <StatCard
+                icon={CheckCircle2}
+                label="Resolved"
+                value={resolvedCount}
+                description="Completed tickets"
+              />
+            </div>
+
+            {/* MY TICKETS */}
+            <section>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    My Tickets
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Select a ticket to view
+                    details and messages.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs text-slate-400 ring-1 ring-slate-800">
+                  {tickets.length}{" "}
+                  {tickets.length === 1
+                    ? "Ticket"
+                    : "Tickets"}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+
+              {sortedTickets.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/20 px-6 py-16 text-center">
+                  <Ticket className="mx-auto mb-4 h-8 w-8 text-sky-400" />
+
+                  <h3 className="text-lg font-semibold text-white">
+                    No tickets yet
+                  </h3>
+
+                  <p className="mt-2 text-sm text-slate-400">
+                    Create a support ticket
+                    when you need assistance.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={onCreateTicket}
+                    className="mt-5 rounded-xl bg-sky-500/10 px-4 py-2.5 text-sm font-semibold text-sky-400 hover:bg-sky-500/20"
+                  >
+                    Create Your First Ticket
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sortedTickets.map(
+                    (ticket) => (
+                      <TicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        onOpenTicket={
+                          setSelectedTicketId
+                        }
+                      />
+                    )
+                  )}
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </main>
+
+      <footer className="border-t border-slate-800 bg-slate-900/30">
+        <div className="mx-auto max-w-7xl px-4 py-5 text-center text-xs text-slate-600">
+          Cloud IT Desk • Support Ticket
+          Management System
+        </div>
+      </footer>
     </div>
   );
 }

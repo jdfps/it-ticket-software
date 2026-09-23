@@ -1,500 +1,1076 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   CloudLightning,
-  PieChart,
-  PlusCircle,
-  ListChecks,
-  ShieldCheck,
-  LogOut,
-  Search,
+  LayoutDashboard,
   Inbox,
-  Loader2,
+  ListChecks,
+  UserPlus,
+  LogOut,
+  Clock,
+  CircleDot,
+  Wrench,
   CheckCircle2,
+  XCircle,
   AlertTriangle,
+  Calendar,
+  UserRound,
+  Tag,
   ChevronDown,
-  ChevronRight,
-  MessageSquare,
-  UserCog,
-  Flag,
-  Send,
-  X,
+  ShieldCheck,
+  ShieldX,
+  Ticket,
 } from "lucide-react";
 
-const STATUS_OPTIONS = ["Open", "In Progress", "Resolved", "Closed"];
+// ================================================
+// HELPERS
+// ================================================
 
-const PRIORITY_OPTIONS = [
-  { value: "Low", ring: "ring-slate-500/30", text: "text-slate-300", dot: "bg-slate-400" },
-  { value: "Medium", ring: "ring-sky-500/30", text: "text-sky-300", dot: "bg-sky-400" },
-  { value: "High", ring: "ring-amber-500/30", text: "text-amber-300", dot: "bg-amber-400" },
-  { value: "Critical", ring: "ring-rose-500/30", text: "text-rose-300", dot: "bg-rose-400" },
-];
+const STATUS_META = {
+  pending: {
+    label: "Pending Review",
+    icon: Clock,
+    className:
+      "bg-amber-500/10 text-amber-300 ring-amber-400/30",
+  },
 
-const CATEGORY_OPTIONS = ["Hardware", "Software", "Network", "Account", "Other"];
+  open: {
+    label: "Open",
+    icon: CircleDot,
+    className:
+      "bg-sky-500/10 text-sky-300 ring-sky-400/30",
+  },
 
-const TECHNICIANS = ["Unassigned", "Alex Kim", "Priya Shah", "Devon Brooks"];
+  in_progress: {
+    label: "In Progress",
+    icon: Wrench,
+    className:
+      "bg-indigo-500/10 text-indigo-300 ring-indigo-400/30",
+  },
 
-const STATUS_STYLE = {
-  Open: "text-amber-300 bg-amber-500/10 ring-amber-500/25",
-  "In Progress": "text-sky-300 bg-sky-500/10 ring-sky-500/25",
-  Resolved: "text-emerald-300 bg-emerald-500/10 ring-emerald-500/25",
-  Closed: "text-slate-400 bg-slate-500/10 ring-slate-500/25",
+  resolved: {
+    label: "Resolved",
+    icon: CheckCircle2,
+    className:
+      "bg-emerald-500/10 text-emerald-300 ring-emerald-400/30",
+  },
+
+  rejected: {
+    label: "Rejected",
+    icon: XCircle,
+    className:
+      "bg-rose-500/10 text-rose-300 ring-rose-400/30",
+  },
 };
 
-const INITIAL_TICKETS = [
-  {
-    id: 1042,
-    title: "Laptop screen flickers during Zoom video calls",
-    category: "Hardware",
-    submittedBy: "Maria Lopez",
-    status: "Open",
-    priority: "Medium",
-    technician: "Unassigned",
-    createdAt: "2026-09-19T09:12:00",
-    pastDue: false,
-    description:
-      "Screen flickers intermittently whenever the camera turns on during video calls. Doesn't happen otherwise.",
-    comments: [],
-  },
-  {
-    id: 1041,
-    title: "Cannot connect to VPN from home network",
-    category: "Network",
-    submittedBy: "James Carter",
-    status: "In Progress",
-    priority: "High",
-    technician: "Alex Kim",
-    createdAt: "2026-09-18T14:03:00",
-    pastDue: true,
-    description:
-      "VPN client fails to authenticate since yesterday morning. Error code 809 shows on connect attempt.",
-    comments: [
-      { author: "Alex Kim", text: "Looking into it, can you confirm your VPN client version?", createdAt: "2026-09-18T15:10:00" },
-    ],
-  },
-  {
-    id: 1040,
-    title: "Excel crashes immediately after opening",
-    category: "Software",
-    submittedBy: "Devon Brooks",
-    status: "Resolved",
-    priority: "Medium",
-    technician: "Priya Shah",
-    createdAt: "2026-09-16T11:00:00",
-    pastDue: false,
-    description: "Excel closes right after the splash screen appears, every time.",
-    comments: [
-      { author: "Priya Shah", text: "Reinstalled the corrupted add-in, confirmed fixed after restart.", createdAt: "2026-09-16T13:25:00" },
-    ],
-  },
-  {
-    id: 1039,
-    title: "Need access to Finance shared drive",
-    category: "Account",
-    submittedBy: "Sarah Nguyen",
-    status: "Closed",
-    priority: "Low",
-    technician: "Alex Kim",
-    createdAt: "2026-09-10T13:45:00",
-    pastDue: false,
-    description: "Requesting read/write access to the Finance shared drive for Q3 reporting.",
-    comments: [
-      { author: "Alex Kim", text: "Access granted, confirmed with user they can reach the drive.", createdAt: "2026-09-11T10:00:00" },
-    ],
-  },
-  {
-    id: 1038,
-    title: "Office wifi drops every 10 minutes on 3rd floor",
-    category: "Network",
-    submittedBy: "Maria Lopez",
-    status: "Open",
-    priority: "Critical",
-    technician: "Unassigned",
-    createdAt: "2026-09-20T08:30:00",
-    pastDue: true,
-    description: "Wifi disconnects repeatedly, affecting the whole 3rd floor since this morning.",
-    comments: [],
-  },
-];
+function formatDate(date) {
+  if (!date) {
+    return "—";
+  }
 
-function timeAgo(iso) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const hrs = Math.floor(diffMs / (1000 * 60 * 60));
-  if (hrs < 1) return "just now";
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return new Date(date).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
-function PriorityDot({ value }) {
-  const meta = PRIORITY_OPTIONS.find((p) => p.value === value) ?? PRIORITY_OPTIONS[0];
-  return <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />;
+function formatDateTime(date) {
+  if (!date) {
+    return "—";
+  }
+
+  return new Date(date).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
-export default function AdminDashboard() {
-  const [tickets, setTickets] = useState(INITIAL_TICKETS);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [categoryFilter, setCategoryFilter] = useState("All");
-  const [expandedId, setExpandedId] = useState(null);
-  const [draftComment, setDraftComment] = useState("");
+function StatusBadge({ status }) {
+  const meta =
+    STATUS_META[status] || STATUS_META.pending;
 
-  const stats = useMemo(() => {
-    return {
-      open: tickets.filter((t) => t.status === "Open").length,
-      inProgress: tickets.filter((t) => t.status === "In Progress").length,
-      resolved: tickets.filter((t) => t.status === "Resolved").length,
-      pastDue: tickets.filter((t) => t.pastDue && t.status !== "Resolved" && t.status !== "Closed").length,
-    };
-  }, [tickets]);
+  const Icon = meta.icon;
 
-  const filtered = useMemo(() => {
-    return tickets.filter((t) => {
-      const matchesSearch =
-        !search.trim() ||
-        t.title.toLowerCase().includes(search.toLowerCase()) ||
-        String(t.id).includes(search);
-      const matchesStatus = statusFilter === "All" || t.status === statusFilter;
-      const matchesCategory = categoryFilter === "All" || t.category === categoryFilter;
-      return matchesSearch && matchesStatus && matchesCategory;
-    });
-  }, [tickets, search, statusFilter, categoryFilter]);
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${meta.className}`}
+    >
+      <Icon className="mr-1.5 h-3.5 w-3.5" />
+      {meta.label}
+    </span>
+  );
+}
 
-  const updateTicket = (id, patch) => {
-    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-  };
-
-  const addComment = (id) => {
-    if (!draftComment.trim()) return;
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              comments: [
-                ...t.comments,
-                { author: "Admin (you)", text: draftComment.trim(), createdAt: new Date().toISOString() },
-              ],
-            }
-          : t
-      )
+function PriorityBadge({ priorityDays }) {
+  if (!priorityDays) {
+    return (
+      <span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-400 ring-1 ring-slate-700">
+        No Priority
+      </span>
     );
-    setDraftComment("");
+  }
+
+  return (
+    <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-300 ring-1 ring-sky-400/30">
+      P{priorityDays}
+    </span>
+  );
+}
+
+// ================================================
+// STAT CARD
+// ================================================
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  description,
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400">
+          <Icon className="h-5 w-5" />
+        </div>
+
+        <span className="text-3xl font-bold text-white">
+          {value}
+        </span>
+      </div>
+
+      <p className="text-sm font-semibold text-slate-200">
+        {label}
+      </p>
+
+      <p className="mt-1 text-xs text-slate-500">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+// ================================================
+// PENDING TICKET CARD
+// ================================================
+
+function PendingTicketCard({
+  ticket,
+  onApproveTicket,
+  onRejectTicket,
+}) {
+  const [priorityDays, setPriorityDays] =
+    useState("");
+
+  const [expanded, setExpanded] =
+    useState(true);
+
+  const handleApprove = () => {
+    if (!priorityDays) {
+      return;
+    }
+
+    onApproveTicket(
+      ticket.id,
+      Number(priorityDays)
+    );
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-50 antialiased">
-      <div
-        className="pointer-events-none fixed inset-0 -z-10"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 10% 10%, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 1) 100%)",
-        }}
-      />
+    <div className="overflow-hidden rounded-2xl border border-amber-500/20 bg-slate-900/50">
+      {/* CARD HEADER */}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-start gap-4 px-5 py-5 text-left"
+      >
+        <div className="mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
+          <Inbox className="h-4 w-4 text-amber-400" />
+        </div>
 
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
-              <CloudLightning className="h-5 w-5" />
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-500">
+              Ticket #{ticket.id}
+            </span>
+
+            <span className="text-slate-700">
+              •
+            </span>
+
+            <span className="text-xs text-slate-500">
+              {ticket.category}
+            </span>
+
+            <StatusBadge status="pending" />
+          </div>
+
+          <h3 className="font-semibold text-white">
+            {ticket.title}
+          </h3>
+
+          <p className="mt-1 text-sm text-slate-400">
+            Submitted by{" "}
+            <span className="font-medium text-slate-300">
+              {ticket.submittedBy}
+            </span>
+          </p>
+        </div>
+
+        <ChevronDown
+          className={`mt-2 h-4 w-4 flex-shrink-0 text-slate-500 transition ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {/* EXPANDED CONTENT */}
+      {expanded && (
+        <div className="border-t border-slate-800 px-5 py-5">
+          {/* DESCRIPTION */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Description
+            </p>
+
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+              {ticket.description}
+            </p>
+          </div>
+
+          {/* INFO */}
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="flex items-center text-xs text-slate-500">
+                <UserRound className="mr-1.5 h-3.5 w-3.5" />
+                Submitted By
+              </p>
+
+              <p className="mt-1 text-sm text-slate-300">
+                {ticket.submittedBy}
+              </p>
             </div>
-            <span className="font-heading text-xl font-bold tracking-tight text-white">
-              Cloud IT <span className="text-sky-400">Desk</span>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="flex items-center text-xs text-slate-500">
+                <Tag className="mr-1.5 h-3.5 w-3.5" />
+                Category
+              </p>
+
+              <p className="mt-1 text-sm text-slate-300">
+                {ticket.category}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="flex items-center text-xs text-slate-500">
+                <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                Submitted
+              </p>
+
+              <p className="mt-1 text-sm text-slate-300">
+                {formatDateTime(
+                  ticket.createdAt
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* PRIORITY SELECTION */}
+          <div className="mt-6 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
+            <label
+              htmlFor={`priority-${ticket.id}`}
+              className="mb-2 block text-sm font-semibold text-slate-200"
+            >
+              Assign Priority
+            </label>
+
+            <p className="mb-3 text-xs text-slate-400">
+              P1 means the ticket should be
+              completed within 1 day. P30 means it
+              should be completed within 30 days.
+            </p>
+
+            <select
+              id={`priority-${ticket.id}`}
+              value={priorityDays}
+              onChange={(event) =>
+                setPriorityDays(
+                  event.target.value
+                )
+              }
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400 sm:max-w-xs"
+            >
+              <option value="">
+                Select priority...
+              </option>
+
+              {Array.from(
+                { length: 30 },
+                (_, index) => {
+                  const days = index + 1;
+
+                  return (
+                    <option
+                      key={days}
+                      value={days}
+                    >
+                      P{days} - {days}{" "}
+                      {days === 1
+                        ? "day"
+                        : "days"}
+                    </option>
+                  );
+                }
+              )}
+            </select>
+          </div>
+
+          {/* ACTIONS */}
+          <div className="mt-5 flex flex-col-reverse gap-3 border-t border-slate-800 pt-5 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() =>
+                onRejectTicket(ticket.id)
+              }
+              className="flex items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/5 px-5 py-2.5 text-sm font-semibold text-rose-400 transition hover:bg-rose-500/10"
+            >
+              <ShieldX className="mr-2 h-4 w-4" />
+              Reject
+            </button>
+
+            <button
+              type="button"
+              onClick={handleApprove}
+              disabled={!priorityDays}
+              className="flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:from-sky-400 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Approve Ticket
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ================================================
+// ALL TICKET ROW
+// ================================================
+
+function TicketRow({ ticket }) {
+  const [expanded, setExpanded] =
+    useState(false);
+
+  const pastDue =
+    ticket.dueAt &&
+    new Date(ticket.dueAt) <
+      new Date() &&
+    ticket.status !== "resolved";
+
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl border bg-slate-900/40 ${
+        pastDue
+          ? "border-rose-500/40"
+          : "border-slate-800"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-4 px-5 py-4 text-left"
+      >
+        <ChevronDown
+          className={`h-4 w-4 flex-shrink-0 text-slate-500 transition ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-500">
+              #{ticket.id}
+            </span>
+
+            <span className="text-xs text-slate-600">
+              {ticket.category}
+            </span>
+
+            {pastDue && (
+              <span className="inline-flex items-center text-xs font-semibold text-rose-400">
+                <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                Past Due
+              </span>
+            )}
+          </div>
+
+          <p className="truncate font-semibold text-slate-100">
+            {ticket.title}
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            {ticket.submittedBy}
+          </p>
+        </div>
+
+        <div className="hidden items-center gap-2 sm:flex">
+          <PriorityBadge
+            priorityDays={
+              ticket.priorityDays
+            }
+          />
+
+          <StatusBadge
+            status={ticket.status}
+          />
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-slate-800 px-5 py-5">
+          <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
+            <PriorityBadge
+              priorityDays={
+                ticket.priorityDays
+              }
+            />
+
+            <StatusBadge
+              status={ticket.status}
+            />
+          </div>
+
+          <p className="text-sm leading-relaxed text-slate-300">
+            {ticket.description}
+          </p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {/* CREATED */}
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="text-xs text-slate-500">
+                Created
+              </p>
+
+              <p className="mt-1 text-sm text-slate-300">
+                {formatDate(
+                  ticket.createdAt
+                )}
+              </p>
+            </div>
+
+            {/* PRIORITY */}
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="text-xs text-slate-500">
+                Priority
+              </p>
+
+              <p className="mt-1 text-sm text-slate-300">
+                {ticket.priorityDays
+                  ? `P${ticket.priorityDays} — ${ticket.priorityDays} ${
+                      ticket.priorityDays ===
+                      1
+                        ? "day"
+                        : "days"
+                    }`
+                  : "Not assigned"}
+              </p>
+            </div>
+
+            {/* TECHNICIAN */}
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="text-xs text-slate-500">
+                Technician
+              </p>
+
+              <p className="mt-1 text-sm text-slate-300">
+                {ticket.technicianName ||
+                  "Unassigned"}
+              </p>
+            </div>
+
+            {/* DUE DATE */}
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="text-xs text-slate-500">
+                Due
+              </p>
+
+              <p
+                className={`mt-1 text-sm ${
+                  pastDue
+                    ? "font-semibold text-rose-400"
+                    : "text-slate-300"
+                }`}
+              >
+                {ticket.dueAt
+                  ? formatDate(
+                      ticket.dueAt
+                    )
+                  : "—"}
+              </p>
+            </div>
+          </div>
+
+          {/* COMMENTS */}
+          {ticket.comments &&
+            ticket.comments.length > 0 && (
+              <div className="mt-5">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Ticket Updates
+                </p>
+
+                <div className="space-y-2">
+                  {ticket.comments.map(
+                    (comment) => (
+                      <div
+                        key={comment.id}
+                        className="rounded-xl border border-slate-800 bg-slate-950/40 p-3"
+                      >
+                        <div className="flex justify-between gap-4">
+                          <p className="text-xs font-semibold text-slate-300">
+                            {
+                              comment.author
+                            }
+                          </p>
+
+                          <p className="text-xs text-slate-600">
+                            {formatDateTime(
+                              comment.timestamp
+                            )}
+                          </p>
+                        </div>
+
+                        <p className="mt-1 text-sm text-slate-400">
+                          {comment.text}
+                        </p>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ================================================
+// ADMIN DASHBOARD
+// ================================================
+
+export default function AdminDashboard({
+  user,
+  tickets = [],
+  onApproveTicket,
+  onRejectTicket,
+  onCreateUser,
+  onLogout,
+}) {
+  const [view, setView] =
+    useState("dashboard");
+
+  // --------------------------------
+  // TICKET GROUPS
+  // --------------------------------
+
+  const pendingTickets =
+    tickets.filter(
+      (ticket) =>
+        ticket.status === "pending"
+    );
+
+  const openTickets =
+    tickets.filter(
+      (ticket) =>
+        ticket.status === "open"
+    );
+
+  const inProgressTickets =
+    tickets.filter(
+      (ticket) =>
+        ticket.status ===
+        "in_progress"
+    );
+
+  const resolvedTickets =
+    tickets.filter(
+      (ticket) =>
+        ticket.status ===
+        "resolved"
+    );
+
+  const rejectedTickets =
+    tickets.filter(
+      (ticket) =>
+        ticket.status ===
+        "rejected"
+    );
+
+  const pastDueTickets =
+    tickets.filter((ticket) => {
+      if (
+        !ticket.dueAt ||
+        ticket.status === "resolved" ||
+        ticket.status === "rejected"
+      ) {
+        return false;
+      }
+
+      return (
+        new Date(ticket.dueAt) <
+        new Date()
+      );
+    });
+
+  const initials =
+    `${user?.firstName?.[0] || ""}${
+      user?.lastName?.[0] || ""
+    }`.toUpperCase();
+
+  const sortedTickets = [
+    ...tickets,
+  ].sort(
+    (a, b) =>
+      new Date(b.createdAt) -
+      new Date(a.createdAt)
+  );
+
+  // --------------------------------
+  // PAGE TITLE
+  // --------------------------------
+
+  let pageTitle = "Admin Dashboard";
+  let pageDescription =
+    "Monitor ticket activity and support operations.";
+
+  if (view === "inbox") {
+    pageTitle = "Admin Inbox";
+    pageDescription =
+      "Review newly submitted tickets, assign a priority, and approve or reject them.";
+  }
+
+  if (view === "tickets") {
+    pageTitle = "All Tickets";
+    pageDescription =
+      "Monitor every ticket across the support system.";
+  }
+
+  // --------------------------------
+  // RENDER
+  // --------------------------------
+
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-50">
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+          {/* LOGO */}
+          <div className="flex items-center space-x-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600">
+              <CloudLightning className="h-5 w-5 text-white" />
+            </div>
+
+            <span className="text-xl font-bold text-white">
+              Cloud IT{" "}
+              <span className="text-sky-400">
+                Desk
+              </span>
             </span>
           </div>
 
-          <nav className="hidden items-center space-x-1 md:flex">
-            <a href="#" className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
-              <PieChart className="mr-1.5 h-4 w-4 text-slate-400" /> Dashboard
-            </a>
-            <a href="#" className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
-              <PlusCircle className="mr-1.5 h-4 w-4 text-slate-400" /> Create Ticket
-            </a>
-            <a href="#" className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white">
-              <ListChecks className="mr-1.5 h-4 w-4 text-slate-400" /> My Tickets
-            </a>
-            <a href="#" className="flex items-center rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-400">
-              <ShieldCheck className="mr-1.5 h-4 w-4 text-sky-400" /> Admin Dashboard
-            </a>
+          {/* NAV */}
+          <nav className="hidden items-center gap-1 md:flex">
+            <button
+              type="button"
+              onClick={() =>
+                setView("dashboard")
+              }
+              className={`flex items-center rounded-lg px-3 py-2 text-sm ${
+                view === "dashboard"
+                  ? "bg-sky-500/10 font-semibold text-sky-400"
+                  : "text-slate-300 hover:bg-slate-800"
+              }`}
+            >
+              <LayoutDashboard className="mr-1.5 h-4 w-4" />
+              Dashboard
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setView("inbox")
+              }
+              className={`relative flex items-center rounded-lg px-3 py-2 text-sm ${
+                view === "inbox"
+                  ? "bg-sky-500/10 font-semibold text-sky-400"
+                  : "text-slate-300 hover:bg-slate-800"
+              }`}
+            >
+              <Inbox className="mr-1.5 h-4 w-4" />
+              Inbox
+
+              {pendingTickets.length >
+                0 && (
+                <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-slate-950">
+                  {
+                    pendingTickets.length
+                  }
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setView("tickets")
+              }
+              className={`flex items-center rounded-lg px-3 py-2 text-sm ${
+                view === "tickets"
+                  ? "bg-sky-500/10 font-semibold text-sky-400"
+                  : "text-slate-300 hover:bg-slate-800"
+              }`}
+            >
+              <ListChecks className="mr-1.5 h-4 w-4" />
+              All Tickets
+            </button>
+
+            <button
+              type="button"
+              onClick={onCreateUser}
+              className="flex items-center rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <UserPlus className="mr-1.5 h-4 w-4" />
+              Create User
+            </button>
           </nav>
 
-          <div className="flex items-center space-x-4">
-            <div className="hidden flex-col text-right sm:flex">
-              <span className="text-sm font-semibold text-slate-200">Devon Brooks</span>
-              <span className="text-xs text-slate-400">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-400 align-middle" />
-                Logged in as: <strong className="font-normal text-slate-300">Admin</strong>
-              </span>
+          {/* ADMIN PROFILE */}
+          <div className="flex items-center gap-4">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-semibold text-slate-100">
+                {user?.firstName}{" "}
+                {user?.lastName}
+              </p>
+
+              <p className="text-xs text-slate-400">
+                Logged in as:{" "}
+                <span className="capitalize text-slate-300">
+                  {user?.role}
+                </span>
+              </p>
             </div>
+
             <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-sky-400">
-              DB
+              {initials}
             </div>
-            <button title="Log Out" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-rose-400">
+
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Log Out"
+              className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-rose-400"
+            >
               <LogOut className="h-5 w-5" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Page Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-heading text-3xl font-bold tracking-tight text-white">Admin Dashboard</h1>
-            <p className="mt-1 text-sm text-slate-400">
-              Review submitted tickets, assign priority, and track resolution across the queue.
-            </p>
-          </div>
-        </div>
+      {/* MAIN */}
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
+        {/* TITLE */}
+        <div className="mb-8">
+          <p className="mb-1 text-sm font-medium text-sky-400">
+            Administration
+          </p>
 
-        {/* Stat Cards */}
-        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard icon={<Inbox className="h-4 w-4" />} label="Open" value={stats.open} tone="amber" />
-          <StatCard icon={<Loader2 className="h-4 w-4" />} label="In Progress" value={stats.inProgress} tone="sky" />
-          <StatCard icon={<CheckCircle2 className="h-4 w-4" />} label="Resolved" value={stats.resolved} tone="emerald" />
-          <StatCard icon={<AlertTriangle className="h-4 w-4" />} label="Past Due" value={stats.pastDue} tone="rose" />
-        </div>
+          <h1 className="text-3xl font-bold text-white">
+            {pageTitle}
+          </h1>
 
-        {/* Filter Bar */}
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-700/80 bg-slate-800/40 p-4 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title or ticket #..."
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-sm text-slate-50 placeholder-slate-500 focus:border-sky-400 focus:outline-none focus:ring-[3px] focus:ring-sky-400/15"
-            />
-          </div>
-
-          <FilterSelect value={statusFilter} onChange={setStatusFilter} options={["All", ...STATUS_OPTIONS]} />
-          <FilterSelect value={categoryFilter} onChange={setCategoryFilter} options={["All", ...CATEGORY_OPTIONS]} />
-        </div>
-
-        {/* Ticket List */}
-        <div className="overflow-hidden rounded-2xl border border-slate-700/80" style={{ background: "rgba(30, 41, 59, 0.5)" }}>
-          <div className="hidden grid-cols-[80px_1fr_140px_150px_160px_100px_36px] gap-4 border-b border-slate-800 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 md:grid">
-            <span>Ticket</span>
-            <span>Title</span>
-            <span>Priority</span>
-            <span>Technician</span>
-            <span>Status</span>
-            <span>Age</span>
-            <span />
-          </div>
-
-          {filtered.length === 0 && (
-            <div className="px-5 py-10 text-center text-sm text-slate-500">
-              No tickets match these filters.
-            </div>
-          )}
-
-          {filtered.map((t) => (
-            <TicketRow
-              key={t.id}
-              ticket={t}
-              expanded={expandedId === t.id}
-              onToggle={() => setExpandedId(expandedId === t.id ? null : t.id)}
-              onUpdate={(patch) => updateTicket(t.id, patch)}
-              draftComment={expandedId === t.id ? draftComment : ""}
-              setDraftComment={setDraftComment}
-              onAddComment={() => addComment(t.id)}
-            />
-          ))}
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, tone }) {
-  const toneMap = {
-    amber: "text-amber-400 bg-amber-500/10",
-    sky: "text-sky-400 bg-sky-500/10",
-    emerald: "text-emerald-400 bg-emerald-500/10",
-    rose: "text-rose-400 bg-rose-500/10",
-  };
-  return (
-    <div
-      className="rounded-2xl border border-slate-700/80 p-4"
-      style={{ background: "rgba(30, 41, 59, 0.6)" }}
-    >
-      <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${toneMap[tone]}`}>
-        {icon}
-      </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-slate-400">{label}</p>
-    </div>
-  );
-}
-
-function FilterSelect({ value, onChange, options }) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="cursor-pointer appearance-none rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-4 pr-9 text-sm text-slate-200 focus:border-sky-400 focus:outline-none focus:ring-[3px] focus:ring-sky-400/15"
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
-    </div>
-  );
-}
-
-function TicketRow({ ticket, expanded, onToggle, onUpdate, draftComment, setDraftComment, onAddComment }) {
-  const priorityMeta = PRIORITY_OPTIONS.find((p) => p.value === ticket.priority) ?? PRIORITY_OPTIONS[0];
-
-  return (
-    <div className="border-b border-slate-800 last:border-b-0">
-      <div
-        onClick={onToggle}
-        className="grid cursor-pointer grid-cols-2 gap-3 px-5 py-3.5 text-sm transition hover:bg-slate-800/40 md:grid-cols-[80px_1fr_140px_150px_160px_100px_36px] md:items-center md:gap-4"
-      >
-        <span className="font-mono text-xs text-slate-500">#{ticket.id}</span>
-
-        <div className="col-span-2 md:col-span-1">
-          <p className="font-medium text-slate-100">{ticket.title}</p>
-          <p className="text-xs text-slate-500">
-            {ticket.category} &middot; {ticket.submittedBy}
-            {ticket.pastDue && ticket.status !== "Resolved" && ticket.status !== "Closed" && (
-              <span className="ml-2 inline-flex items-center gap-1 text-rose-400">
-                <AlertTriangle className="h-3 w-3" /> Past due
-              </span>
-            )}
+          <p className="mt-2 text-sm text-slate-400">
+            {pageDescription}
           </p>
         </div>
 
-        <div onClick={(e) => e.stopPropagation()}>
-          <div className="relative">
-            <select
-              value={ticket.priority}
-              onChange={(e) => onUpdate({ priority: e.target.value })}
-              className={`w-full cursor-pointer appearance-none rounded-lg border border-slate-700 bg-slate-950 py-1.5 pl-7 pr-7 text-xs font-medium ${priorityMeta.text} focus:border-sky-400 focus:outline-none focus:ring-[3px] focus:ring-sky-400/15`}
-            >
-              {PRIORITY_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value} className="text-slate-100">
-                  {p.value}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2">
-              <PriorityDot value={ticket.priority} />
-            </span>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500" />
-          </div>
-        </div>
+        {/* ==================================
+            DASHBOARD
+        ================================== */}
 
-        <div onClick={(e) => e.stopPropagation()}>
-          <div className="relative">
-            <select
-              value={ticket.technician}
-              onChange={(e) => onUpdate({ technician: e.target.value })}
-              className="w-full cursor-pointer appearance-none rounded-lg border border-slate-700 bg-slate-950 py-1.5 pl-7 pr-7 text-xs text-slate-300 focus:border-sky-400 focus:outline-none focus:ring-[3px] focus:ring-sky-400/15"
-            >
-              {TECHNICIANS.map((tech) => (
-                <option key={tech} value={tech}>
-                  {tech}
-                </option>
-              ))}
-            </select>
-            <UserCog className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500" />
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500" />
-          </div>
-        </div>
+        {view === "dashboard" && (
+          <>
+            {/* STATS */}
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                icon={Inbox}
+                label="Pending Review"
+                value={
+                  pendingTickets.length
+                }
+                description="Waiting for admin approval"
+              />
 
-        <div onClick={(e) => e.stopPropagation()}>
-          <div className="relative">
-            <select
-              value={ticket.status}
-              onChange={(e) =>
-                onUpdate({
-                  status: e.target.value,
-                  ...(e.target.value === "Resolved" || e.target.value === "Closed" ? { pastDue: false } : {}),
-                })
-              }
-              className={`w-full cursor-pointer appearance-none rounded-full border-0 py-1.5 pl-3 pr-7 text-xs font-semibold ring-1 ring-inset focus:outline-none focus:ring-2 focus:ring-sky-400/40 ${STATUS_STYLE[ticket.status]}`}
-            >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s} className="bg-slate-900 text-slate-100">
-                  {s}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 opacity-70" />
-          </div>
-        </div>
+              <StatCard
+                icon={CircleDot}
+                label="Open Queue"
+                value={openTickets.length}
+                description="Available for technicians"
+              />
 
-        <span className="text-xs text-slate-500">{timeAgo(ticket.createdAt)}</span>
+              <StatCard
+                icon={Wrench}
+                label="In Progress"
+                value={
+                  inProgressTickets.length
+                }
+                description="Currently being worked"
+              />
 
-        <ChevronRight
-          className={`hidden h-4 w-4 text-slate-500 transition-transform md:block ${expanded ? "rotate-90" : ""}`}
-        />
-      </div>
-
-      {expanded && (
-        <div className="border-t border-slate-800 bg-slate-950/40 px-5 py-5">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <h4 className="mb-1.5 flex items-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <Flag className="mr-1.5 h-3.5 w-3.5" /> Description
-              </h4>
-              <p className="text-sm leading-relaxed text-slate-300">{ticket.description}</p>
+              <StatCard
+                icon={AlertTriangle}
+                label="Past Due"
+                value={
+                  pastDueTickets.length
+                }
+                description="Past assigned deadline"
+              />
             </div>
 
-            <div>
-              <h4 className="mb-1.5 flex items-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Resolution Notes
-              </h4>
+            {/* PENDING REVIEW PREVIEW */}
+            <section className="mb-8">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    Pending Review
+                  </h2>
 
-              <div className="mb-3 max-h-40 space-y-2 overflow-y-auto pr-1">
-                {ticket.comments.length === 0 && (
-                  <p className="text-xs text-slate-500">No notes yet.</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Tickets that need admin
+                    approval.
+                  </p>
+                </div>
+
+                {pendingTickets.length >
+                  0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setView("inbox")
+                    }
+                    className="text-sm font-semibold text-sky-400 hover:text-sky-300"
+                  >
+                    View Inbox →
+                  </button>
                 )}
-                {ticket.comments.map((c, i) => (
-                  <div key={i} className="rounded-lg border border-slate-800 bg-slate-900/60 p-2.5 text-xs">
-                    <div className="mb-0.5 flex items-center justify-between">
-                      <span className="font-semibold text-slate-300">{c.author}</span>
-                      <span className="text-slate-500">{timeAgo(c.createdAt)}</span>
-                    </div>
-                    <p className="text-slate-400">{c.text}</p>
-                  </div>
-                ))}
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={draftComment}
-                  onChange={(e) => setDraftComment(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && onAddComment()}
-                  placeholder="Describe what was done to fix this..."
-                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:border-sky-400 focus:outline-none focus:ring-[3px] focus:ring-sky-400/15"
-                />
-                <button
-                  onClick={onAddComment}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white transition hover:from-sky-400 hover:to-blue-500"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </button>
+              {pendingTickets.length ===
+              0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/20 px-6 py-10 text-center">
+                  <CheckCircle2 className="mx-auto mb-3 h-7 w-7 text-emerald-400" />
+
+                  <h3 className="font-semibold text-white">
+                    Inbox is clear
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    There are no tickets
+                    waiting for review.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingTickets
+                    .slice(0, 3)
+                    .map((ticket) => (
+                      <PendingTicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        onApproveTicket={
+                          onApproveTicket
+                        }
+                        onRejectTicket={
+                          onRejectTicket
+                        }
+                      />
+                    ))}
+                </div>
+              )}
+            </section>
+
+            {/* SYSTEM SUMMARY */}
+            <section>
+              <h2 className="mb-4 text-xl font-semibold text-white">
+                Ticket Overview
+              </h2>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+                  <p className="text-sm text-slate-400">
+                    Resolved Tickets
+                  </p>
+
+                  <p className="mt-2 text-3xl font-bold text-emerald-400">
+                    {
+                      resolvedTickets.length
+                    }
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+                  <p className="text-sm text-slate-400">
+                    Rejected Tickets
+                  </p>
+
+                  <p className="mt-2 text-3xl font-bold text-rose-400">
+                    {
+                      rejectedTickets.length
+                    }
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+                  <p className="text-sm text-slate-400">
+                    Total Tickets
+                  </p>
+
+                  <p className="mt-2 text-3xl font-bold text-white">
+                    {tickets.length}
+                  </p>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ==================================
+            ADMIN INBOX
+        ================================== */}
+
+        {view === "inbox" && (
+          <section>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-white">
+                  Tickets Waiting for Review
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {
+                    pendingTickets.length
+                  }{" "}
+                  pending{" "}
+                  {pendingTickets.length ===
+                  1
+                    ? "ticket"
+                    : "tickets"}
+                </p>
               </div>
             </div>
-          </div>
 
-          <button
-            onClick={onToggle}
-            className="mt-4 flex items-center text-xs font-medium text-slate-500 hover:text-slate-300"
-          >
-            <X className="mr-1 h-3 w-3" /> Collapse
-          </button>
+            {pendingTickets.length ===
+            0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/20 px-6 py-16 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+                </div>
+
+                <h3 className="text-lg font-semibold text-white">
+                  Inbox is clear
+                </h3>
+
+                <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
+                  There are currently no
+                  tickets waiting for admin
+                  review.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pendingTickets.map(
+                  (ticket) => (
+                    <PendingTicketCard
+                      key={ticket.id}
+                      ticket={ticket}
+                      onApproveTicket={
+                        onApproveTicket
+                      }
+                      onRejectTicket={
+                        onRejectTicket
+                      }
+                    />
+                  )
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ==================================
+            ALL TICKETS
+        ================================== */}
+
+        {view === "tickets" && (
+          <section>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-white">
+                  All Tickets
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Monitor tickets throughout
+                  their entire lifecycle.
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-400 ring-1 ring-slate-800">
+                {tickets.length} Total
+              </div>
+            </div>
+
+            {sortedTickets.length ===
+            0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-700 px-6 py-16 text-center">
+                <Ticket className="mx-auto mb-4 h-8 w-8 text-sky-400" />
+
+                <h3 className="text-lg font-semibold text-white">
+                  No tickets
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  Submitted tickets will
+                  appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sortedTickets.map(
+                  (ticket) => (
+                    <TicketRow
+                      key={ticket.id}
+                      ticket={ticket}
+                    />
+                  )
+                )}
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+
+      {/* FOOTER */}
+      <footer className="border-t border-slate-800 bg-slate-900/30">
+        <div className="mx-auto max-w-7xl px-4 py-5 text-center text-xs text-slate-600 sm:px-6">
+          Cloud IT Desk • Administrator
+          Console
         </div>
-      )}
+      </footer>
     </div>
   );
 }

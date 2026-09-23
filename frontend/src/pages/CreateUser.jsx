@@ -1,11 +1,7 @@
 import { useState } from "react";
+
 import {
-  CloudLightning,
-  PieChart,
-  PlusCircle,
-  ListChecks,
-  Users,
-  LogOut,
+  ArrowLeft,
   UserPlus,
   Mail,
   User,
@@ -40,17 +36,23 @@ const ROLE_OPTIONS = [
   },
 ];
 
-export default function CreateUser() {
+export default function CreateUser({
+  onDashboard,
+}) {
   const [form, setForm] = useState(INITIAL_FORM);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [createdUser, setCreatedUser] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  const handleChange = (field) => (e) => {
+  // ================================================
+  // FORM HANDLING
+  // ================================================
+
+  const handleChange = (field) => (event) => {
     setForm((prev) => ({
       ...prev,
-      [field]: e.target.value,
+      [field]: event.target.value,
     }));
 
     if (errors[field]) {
@@ -61,80 +63,160 @@ export default function CreateUser() {
     }
   };
 
+  // ================================================
+  // VALIDATION
+  // ================================================
+
   const validate = () => {
     const newErrors = {};
 
     if (!form.firstName.trim()) {
-      newErrors.firstName = "First name is required.";
+      newErrors.firstName =
+        "First name is required.";
     }
 
     if (!form.lastName.trim()) {
-      newErrors.lastName = "Last name is required.";
+      newErrors.lastName =
+        "Last name is required.";
     }
 
     if (!form.email.trim()) {
-      newErrors.email = "Email is required.";
-    } else if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
-      newErrors.email = "Enter a valid email address.";
+      newErrors.email =
+        "Email is required.";
+    } else if (
+      !/^\S+@\S+\.\S+$/.test(
+        form.email.trim()
+      )
+    ) {
+      newErrors.email =
+        "Enter a valid email address.";
     }
 
     if (!form.role) {
-      newErrors.role = "A role is required.";
+      newErrors.role =
+        "A role is required.";
     }
 
     return newErrors;
   };
 
+  // ================================================
+  // TEMPORARY PASSWORD
+  // ================================================
+
   const generateTemporaryPassword = () => {
-    const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-    const lowercase = "abcdefghijkmnopqrstuvwxyz";
+    const uppercase =
+      "ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+    const lowercase =
+      "abcdefghijkmnopqrstuvwxyz";
+
     const numbers = "23456789";
+
     const symbols = "!@#$%";
 
     const allCharacters =
-      uppercase + lowercase + numbers + symbols;
+      uppercase +
+      lowercase +
+      numbers +
+      symbols;
 
     let password = "";
 
-    password += uppercase[Math.floor(Math.random() * uppercase.length)];
-    password += lowercase[Math.floor(Math.random() * lowercase.length)];
-    password += numbers[Math.floor(Math.random() * numbers.length)];
-    password += symbols[Math.floor(Math.random() * symbols.length)];
+    password +=
+      uppercase[
+        Math.floor(
+          Math.random() *
+            uppercase.length
+        )
+      ];
 
-    for (let i = password.length; i < 12; i++) {
+    password +=
+      lowercase[
+        Math.floor(
+          Math.random() *
+            lowercase.length
+        )
+      ];
+
+    password +=
+      numbers[
+        Math.floor(
+          Math.random() *
+            numbers.length
+        )
+      ];
+
+    password +=
+      symbols[
+        Math.floor(
+          Math.random() *
+            symbols.length
+        )
+      ];
+
+    for (
+      let i = password.length;
+      i < 12;
+      i++
+    ) {
       password +=
-        allCharacters[Math.floor(Math.random() * allCharacters.length)];
+        allCharacters[
+          Math.floor(
+            Math.random() *
+              allCharacters.length
+          )
+        ];
     }
 
     return password
       .split("")
-      .sort(() => Math.random() - 0.5)
+      .sort(
+        () => Math.random() - 0.5
+      )
       .join("");
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // ================================================
+  // CREATE USER
+  // ================================================
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
 
     const newErrors = validate();
+
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length > 0) {
+    if (
+      Object.keys(newErrors).length > 0
+    ) {
       return;
     }
 
     setSubmitting(true);
 
-    // Simulated user creation.
-    // This will eventually become a FastAPI request.
+    // Simulated account creation.
+    // Later this will become a FastAPI request.
     setTimeout(() => {
-      const temporaryPassword = generateTemporaryPassword();
+      const temporaryPassword =
+        generateTemporaryPassword();
 
       setCreatedUser({
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: form.email.trim(),
-        role: form.role,
+        firstName:
+          form.firstName.trim(),
+
+        lastName:
+          form.lastName.trim(),
+
+        email:
+          form.email.trim(),
+
+        role:
+          form.role,
+
         temporaryPassword,
+
         mustChangePassword: true,
       });
 
@@ -143,25 +225,34 @@ export default function CreateUser() {
     }, 700);
   };
 
-  const handleCopyPassword = async () => {
-    if (!createdUser) {
-      return;
-    }
+  // ================================================
+  // COPY PASSWORD
+  // ================================================
 
-    try {
-      await navigator.clipboard.writeText(
-        createdUser.temporaryPassword
-      );
+  const handleCopyPassword =
+    async () => {
+      if (!createdUser) {
+        return;
+      }
 
-      setCopied(true);
+      try {
+        await navigator.clipboard.writeText(
+          createdUser.temporaryPassword
+        );
 
-      setTimeout(() => {
+        setCopied(true);
+
+        setTimeout(() => {
+          setCopied(false);
+        }, 2000);
+      } catch {
         setCopied(false);
-      }, 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
+      }
+    };
+
+  // ================================================
+  // CREATE ANOTHER USER
+  // ================================================
 
   const handleCreateAnother = () => {
     setForm(INITIAL_FORM);
@@ -170,9 +261,14 @@ export default function CreateUser() {
     setCopied(false);
   };
 
+  // ================================================
+  // RENDER
+  // ================================================
+
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-50 antialiased">
+    <div className="min-h-screen bg-slate-950 font-sans text-slate-50 antialiased">
       {/* Background */}
+
       <div
         className="pointer-events-none fixed inset-0 -z-10"
         style={{
@@ -181,87 +277,25 @@ export default function CreateUser() {
         }}
       />
 
-      {/* Navigation */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
-              <CloudLightning className="h-5 w-5" />
-            </div>
+      {/* ============================================
+          MAIN CONTENT
+      ============================================ */}
 
-            <span className="font-heading text-xl font-bold tracking-tight text-white">
-              Cloud IT <span className="text-sky-400">Desk</span>
-            </span>
-          </div>
+      <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+        {/* BACK BUTTON */}
 
-          {/* Navigation Links */}
-          <nav className="hidden items-center space-x-1 md:flex">
-            <a
-              href="#"
-              className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
-            >
-              <PieChart className="mr-1.5 h-4 w-4 text-slate-400" />
-              Dashboard
-            </a>
+        <button
+          type="button"
+          onClick={onDashboard}
+          className="mb-7 flex items-center text-sm font-medium text-slate-400 transition hover:text-sky-400"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
 
-            <a
-              href="#"
-              className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
-            >
-              <PlusCircle className="mr-1.5 h-4 w-4 text-slate-400" />
-              Create Ticket
-            </a>
+          Back to Admin Dashboard
+        </button>
 
-            <a
-              href="#"
-              className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
-            >
-              <ListChecks className="mr-1.5 h-4 w-4 text-slate-400" />
-              My Tickets
-            </a>
+        {/* PAGE TITLE */}
 
-            <a
-              href="#"
-              className="flex items-center rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-400"
-            >
-              <Users className="mr-1.5 h-4 w-4" />
-              Create User
-            </a>
-          </nav>
-
-          {/* Admin Profile */}
-          <div className="flex items-center space-x-4">
-            <div className="hidden flex-col text-right sm:flex">
-              <span className="text-sm font-semibold text-slate-200">
-                Devon Brooks
-              </span>
-
-              <span className="text-xs text-slate-400">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-400 align-middle" />
-                Logged in as:{" "}
-                <strong className="font-normal text-slate-300">
-                  Admin
-                </strong>
-              </span>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-sky-400">
-              DB
-            </div>
-
-            <button
-              title="Log Out"
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-rose-400"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-400">
@@ -269,33 +303,44 @@ export default function CreateUser() {
             </div>
 
             <div>
-              <h1 className="font-heading text-3xl font-bold tracking-tight text-white">
+              <h1 className="text-3xl font-bold tracking-tight text-white">
                 Create User
               </h1>
 
               <p className="mt-1 text-sm text-slate-400">
-                Create a new account and assign the user's system role.
+                Create a new account and
+                assign the user's system role.
               </p>
             </div>
           </div>
         </div>
 
+        {/* ==========================================
+            CREATE USER FORM
+        ========================================== */}
+
         {!createdUser ? (
           <div
             className="rounded-2xl border border-slate-700/80 p-6 shadow-2xl sm:p-8"
             style={{
-              background: "rgba(30, 41, 59, 0.7)",
-              backdropFilter: "blur(12px)",
+              background:
+                "rgba(30, 41, 59, 0.7)",
+
+              backdropFilter:
+                "blur(12px)",
             }}
           >
-            {/* Error Alert */}
-            {Object.keys(errors).length > 0 && (
+            {/* ERROR ALERT */}
+
+            {Object.keys(errors).length >
+              0 && (
               <div className="mb-6 flex items-start space-x-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400">
                 <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
 
                 <div>
                   <span className="font-semibold">
-                    Please fix the highlighted fields.
+                    Please fix the
+                    highlighted fields.
                   </span>
                 </div>
               </div>
@@ -306,23 +351,35 @@ export default function CreateUser() {
               onSubmit={handleSubmit}
               noValidate
             >
-              {/* Name */}
+              {/* ==================================
+                  NAME
+              ================================== */}
+
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {/* FIRST NAME */}
+
                 <div>
                   <label
                     htmlFor="firstName"
                     className="mb-1.5 block text-sm font-medium text-slate-200"
                   >
                     First Name{" "}
-                    <span className="text-rose-400">*</span>
+
+                    <span className="text-rose-400">
+                      *
+                    </span>
                   </label>
 
                   <div className="relative">
                     <input
                       id="firstName"
                       type="text"
-                      value={form.firstName}
-                      onChange={handleChange("firstName")}
+                      value={
+                        form.firstName
+                      }
+                      onChange={handleChange(
+                        "firstName"
+                      )}
                       placeholder="John"
                       className={`w-full rounded-xl border bg-slate-950 py-3 pl-11 pr-4 text-sm text-slate-50 placeholder-slate-500 transition focus:outline-none focus:ring-[3px] ${
                         errors.firstName
@@ -336,10 +393,14 @@ export default function CreateUser() {
 
                   {errors.firstName && (
                     <span className="mt-1 block text-xs text-rose-400">
-                      {errors.firstName}
+                      {
+                        errors.firstName
+                      }
                     </span>
                   )}
                 </div>
+
+                {/* LAST NAME */}
 
                 <div>
                   <label
@@ -347,15 +408,22 @@ export default function CreateUser() {
                     className="mb-1.5 block text-sm font-medium text-slate-200"
                   >
                     Last Name{" "}
-                    <span className="text-rose-400">*</span>
+
+                    <span className="text-rose-400">
+                      *
+                    </span>
                   </label>
 
                   <div className="relative">
                     <input
                       id="lastName"
                       type="text"
-                      value={form.lastName}
-                      onChange={handleChange("lastName")}
+                      value={
+                        form.lastName
+                      }
+                      onChange={handleChange(
+                        "lastName"
+                      )}
                       placeholder="Doe"
                       className={`w-full rounded-xl border bg-slate-950 py-3 pl-11 pr-4 text-sm text-slate-50 placeholder-slate-500 transition focus:outline-none focus:ring-[3px] ${
                         errors.lastName
@@ -369,20 +437,28 @@ export default function CreateUser() {
 
                   {errors.lastName && (
                     <span className="mt-1 block text-xs text-rose-400">
-                      {errors.lastName}
+                      {
+                        errors.lastName
+                      }
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Email */}
+              {/* ==================================
+                  EMAIL
+              ================================== */}
+
               <div>
                 <label
                   htmlFor="email"
                   className="mb-1.5 block text-sm font-medium text-slate-200"
                 >
                   Email Address{" "}
-                  <span className="text-rose-400">*</span>
+
+                  <span className="text-rose-400">
+                    *
+                  </span>
                 </label>
 
                 <div className="relative">
@@ -390,7 +466,9 @@ export default function CreateUser() {
                     id="email"
                     type="email"
                     value={form.email}
-                    onChange={handleChange("email")}
+                    onChange={handleChange(
+                      "email"
+                    )}
                     placeholder="john.doe@company.com"
                     className={`w-full rounded-xl border bg-slate-950 py-3 pl-11 pr-4 text-sm text-slate-50 placeholder-slate-500 transition focus:outline-none focus:ring-[3px] ${
                       errors.email
@@ -409,35 +487,51 @@ export default function CreateUser() {
                 )}
               </div>
 
-              {/* Role */}
+              {/* ==================================
+                  ACCOUNT ROLE
+              ================================== */}
+
               <div>
                 <label
                   htmlFor="role"
                   className="mb-1.5 block text-sm font-medium text-slate-200"
                 >
                   Account Role{" "}
-                  <span className="text-rose-400">*</span>
+
+                  <span className="text-rose-400">
+                    *
+                  </span>
                 </label>
 
                 <div className="relative">
                   <select
                     id="role"
                     value={form.role}
-                    onChange={handleChange("role")}
+                    onChange={handleChange(
+                      "role"
+                    )}
                     className={`w-full cursor-pointer appearance-none rounded-xl border bg-slate-950 py-3 pl-11 pr-10 text-sm text-slate-50 transition focus:outline-none focus:ring-[3px] ${
                       errors.role
                         ? "border-rose-400 focus:ring-rose-400/15"
                         : "border-slate-700 focus:border-sky-400 focus:ring-sky-400/15"
                     }`}
                   >
-                    {ROLE_OPTIONS.map((role) => (
-                      <option
-                        key={role.value}
-                        value={role.value}
-                      >
-                        {role.label}
-                      </option>
-                    ))}
+                    {ROLE_OPTIONS.map(
+                      (role) => (
+                        <option
+                          key={
+                            role.value
+                          }
+                          value={
+                            role.value
+                          }
+                        >
+                          {
+                            role.label
+                          }
+                        </option>
+                      )
+                    )}
                   </select>
 
                   <Shield className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
@@ -446,12 +540,17 @@ export default function CreateUser() {
                 </div>
 
                 <p className="mt-2 text-xs text-slate-500">
-                  Employees submit tickets, technicians resolve
-                  tickets, and admins manage the system.
+                  Employees submit tickets,
+                  technicians resolve tickets,
+                  and admins manage the
+                  system.
                 </p>
               </div>
 
-              {/* Temporary Password Information */}
+              {/* ==================================
+                  TEMPORARY PASSWORD
+              ================================== */}
+
               <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-4">
                 <div className="flex items-start gap-3">
                   <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-400" />
@@ -462,16 +561,22 @@ export default function CreateUser() {
                     </h3>
 
                     <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                      A temporary password will automatically be
-                      generated for this account. The user will be
-                      required to create a new password the first time
-                      they sign in.
+                      A temporary password
+                      will automatically be
+                      generated for this
+                      account. The user will
+                      be required to create a
+                      new password the first
+                      time they sign in.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Submit */}
+              {/* ==================================
+                  SUBMIT
+              ================================== */}
+
               <div className="flex justify-end border-t border-slate-800 pt-6">
                 <button
                   type="submit"
@@ -481,11 +586,13 @@ export default function CreateUser() {
                   {submitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
                       Creating User...
                     </>
                   ) : (
                     <>
                       <UserPlus className="mr-2 h-4 w-4" />
+
                       Create User
                     </>
                   )}
@@ -494,12 +601,18 @@ export default function CreateUser() {
             </form>
           </div>
         ) : (
-          /* Success Screen */
+          /* ========================================
+             SUCCESS SCREEN
+          ======================================== */
+
           <div
             className="rounded-2xl border border-slate-700/80 p-6 shadow-2xl sm:p-8"
             style={{
-              background: "rgba(30, 41, 59, 0.7)",
-              backdropFilter: "blur(12px)",
+              background:
+                "rgba(30, 41, 59, 0.7)",
+
+              backdropFilter:
+                "blur(12px)",
             }}
           >
             <div className="mb-6 flex flex-col items-center text-center">
@@ -512,9 +625,12 @@ export default function CreateUser() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-400">
-                Give the login information below to the new user.
+                Give the login information
+                below to the new user.
               </p>
             </div>
+
+            {/* USER INFORMATION */}
 
             <div className="space-y-4 rounded-xl border border-slate-700 bg-slate-950/60 p-5">
               <div>
@@ -523,7 +639,8 @@ export default function CreateUser() {
                 </span>
 
                 <p className="mt-1 text-sm font-medium text-slate-200">
-                  {createdUser.firstName} {createdUser.lastName}
+                  {createdUser.firstName}{" "}
+                  {createdUser.lastName}
                 </p>
               </div>
 
@@ -554,12 +671,16 @@ export default function CreateUser() {
 
                 <div className="mt-1 flex items-center gap-2">
                   <code className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 font-mono text-sm font-semibold text-sky-300">
-                    {createdUser.temporaryPassword}
+                    {
+                      createdUser.temporaryPassword
+                    }
                   </code>
 
                   <button
                     type="button"
-                    onClick={handleCopyPassword}
+                    onClick={
+                      handleCopyPassword
+                    }
                     className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:text-white"
                     title="Copy temporary password"
                   >
@@ -573,20 +694,38 @@ export default function CreateUser() {
               </div>
             </div>
 
+            {/* WARNING */}
+
             <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
               <p className="text-xs leading-relaxed text-amber-200/80">
-                The user must change this temporary password the first
+                The user must change this
+                temporary password the first
                 time they log in.
               </p>
             </div>
 
-            <div className="mt-6 flex justify-end">
+            {/* ACTIONS */}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
               <button
                 type="button"
-                onClick={handleCreateAnother}
-                className="flex items-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:from-sky-400 hover:to-blue-500"
+                onClick={onDashboard}
+                className="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+
+                Back to Dashboard
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  handleCreateAnother
+                }
+                className="flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:from-sky-400 hover:to-blue-500"
               >
                 <UserPlus className="mr-2 h-4 w-4" />
+
                 Create Another User
               </button>
             </div>

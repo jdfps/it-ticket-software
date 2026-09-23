@@ -1,175 +1,207 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   CloudLightning,
   PieChart,
   PlusCircle,
-  ListChecks,
   LogOut,
-  ChevronRight,
-  Clock,
-  AlertTriangle,
-  Layers,
-  ChevronDown,
-  UploadCloud,
   Paperclip,
-  Check,
-  RotateCcw,
+  X,
   Send,
-  Loader2,
-  CheckCircle2,
+  ArrowLeft,
+  FileText,
+  Tag,
+  AlignLeft,
+  Clock,
 } from "lucide-react";
 
-const CATEGORY_OPTIONS = [
-  { value: "Hardware", label: "💻 Hardware & Workstations" },
-  { value: "Software", label: "💿 Software & Applications" },
-  { value: "Network", label: "🌐 Network, Wi-Fi & VPN" },
-  { value: "Account", label: "🔑 Account & Access Permissions" },
-  { value: "Other", label: "❓ Other / General Service Request" },
-];
+export default function CreateSupportTicket({
+  user,
+  onSubmitTicket,
+  onDashboard,
+  onLogout,
+}) {
+  const [form, setForm] = useState({
+    title: "",
+    category: "",
+    description: "",
+  });
 
-const INITIAL_FORM = { title: "", category: "", description: "" };
-
-export default function CreateSupportTicket() {
-  const [form, setForm] = useState(INITIAL_FORM);
-  const [errors, setErrors] = useState({});
   const [files, setFiles] = useState([]);
-  const [dragActive, setDragActive] = useState(false);
+  const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [toast, setToast] = useState({ show: false, ticketNum: null });
-  const fileInputRef = useRef(null);
 
-  const handleChange = (field) => (e) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const categories = [
+    "Hardware",
+    "Software",
+    "Network",
+    "Account / Access",
+    "Email",
+    "Security",
+    "Other",
+  ];
+
+  const initials =
+    `${user?.firstName?.[0] || ""}${
+      user?.lastName?.[0] || ""
+    }`.toUpperCase();
+
+  // --------------------------------
+  // FORM CHANGE
+  // --------------------------------
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((previousForm) => ({
+      ...previousForm,
+      [name]: value,
+    }));
+
+    // Remove the error once the user starts fixing the field.
+    if (errors[name]) {
+      setErrors((previousErrors) => ({
+        ...previousErrors,
+        [name]: "",
+      }));
+    }
   };
 
-  const handleFiles = (fileListLike) => {
-    const incoming = Array.from(fileListLike);
-    if (incoming.length === 0) return;
-    setFiles(incoming);
-  };
-
-  const onDrop = (e) => {
-    e.preventDefault();
-    setDragActive(false);
-    handleFiles(e.dataTransfer.files);
-  };
-
-  const resetForm = () => {
-    setForm(INITIAL_FORM);
-    setFiles([]);
-    setErrors({});
-    setSubmitting(false);
-    setSubmitted(false);
-  };
+  // --------------------------------
+  // VALIDATION
+  // --------------------------------
 
   const validate = () => {
     const newErrors = {};
-    if (!form.title.trim() || form.title.trim().length < 10) {
-      newErrors.title = "Ticket title must be at least 10 characters long.";
+
+    if (!form.title.trim()) {
+      newErrors.title = "Please enter a ticket title.";
     }
+
     if (!form.category) {
-      newErrors.category = "Please select a ticket category.";
+      newErrors.category = "Please select a category.";
     }
-    if (!form.description.trim() || form.description.trim().length < 20) {
+
+    if (!form.description.trim()) {
       newErrors.description =
-        "Description must provide at least 20 characters of detail.";
+        "Please describe the issue you are experiencing.";
     }
+
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // --------------------------------
+  // FILE ATTACHMENTS
+  // --------------------------------
+
+  const handleFileChange = (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+
+    setFiles((previousFiles) => [
+      ...previousFiles,
+      ...selectedFiles,
+    ]);
+
+    // Allows the same file to be selected again later.
+    event.target.value = "";
+  };
+
+  const removeFile = (indexToRemove) => {
+    setFiles((previousFiles) =>
+      previousFiles.filter(
+        (_, index) => index !== indexToRemove
+      )
+    );
+  };
+
+  // --------------------------------
+  // SUBMIT TICKET
+  // --------------------------------
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
     const newErrors = validate();
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
 
     setSubmitting(true);
 
-    setTimeout(() => {
-      const ticketNum = Math.floor(1000 + Math.random() * 9000);
-      setSubmitting(false);
-      setSubmitted(true);
-      setToast({ show: true, ticketNum });
-
-      setTimeout(() => {
-        setToast({ show: false, ticketNum: null });
-        resetForm();
-      }, 3000);
-    }, 1000);
+    onSubmitTicket({
+      title: form.title.trim(),
+      category: form.category,
+      description: form.description.trim(),
+      files,
+    });
   };
 
-  const charCount = form.description.length;
+  // --------------------------------
+  // PAGE
+  // --------------------------------
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-50 antialiased">
-      <div
-        className="pointer-events-none fixed inset-0 -z-10"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 10% 10%, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 1) 100%)",
-        }}
-      />
-
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          {/* Branding */}
+    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-50">
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+          {/* LOGO */}
           <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
-              <CloudLightning className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-lg shadow-sky-900/20">
+              <CloudLightning className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <span className="font-heading text-xl font-bold tracking-tight text-white">
-                Cloud IT <span className="text-sky-400">Desk</span>
+
+            <span className="text-xl font-bold tracking-tight text-white">
+              Cloud IT{" "}
+              <span className="text-sky-400">
+                Desk
               </span>
-            </div>
+            </span>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden items-center space-x-1 md:flex">
-            <a
-              href="#"
+          {/* NAVIGATION */}
+          <nav className="hidden items-center gap-1 md:flex">
+            <button
+              type="button"
+              onClick={onDashboard}
               className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
             >
-              <PieChart className="mr-1.5 h-4 w-4 text-slate-400" /> Dashboard
-            </a>
-            <a
-              href="#"
-              className="flex items-center rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-400"
+              <PieChart className="mr-1.5 h-4 w-4 text-slate-400" />
+              Dashboard
+            </button>
+
+            <button
+              type="button"
+              className="flex items-center rounded-lg bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-400"
             >
-              <PlusCircle className="mr-1.5 h-4 w-4 text-sky-400" /> Create
-              Ticket
-            </a>
-            <a
-              href="#"
-              className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
-            >
-              <ListChecks className="mr-1.5 h-4 w-4 text-slate-400" /> My
-              Tickets
-            </a>
+              <PlusCircle className="mr-1.5 h-4 w-4" />
+              Create Ticket
+            </button>
           </nav>
 
-          {/* User Profile & Status */}
-          <div className="flex items-center space-x-4">
-            <div className="hidden flex-col text-right sm:flex">
-              <span className="text-sm font-semibold text-slate-200">
-                John Doe
-              </span>
-              <span className="text-xs text-slate-400">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-400 align-middle" />
+          {/* USER */}
+          <div className="flex items-center gap-4">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-semibold text-slate-100">
+                {user?.firstName} {user?.lastName}
+              </p>
+
+              <p className="text-xs text-slate-400">
                 Logged in as:{" "}
-                <strong className="font-normal text-slate-300">
-                  Employee
-                </strong>
-              </span>
+                <span className="capitalize text-slate-300">
+                  {user?.role}
+                </span>
+              </p>
             </div>
 
             <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sm font-bold text-sky-400">
-              JD
+              {initials}
             </div>
 
             <button
+              type="button"
+              onClick={onLogout}
               title="Log Out"
               className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-rose-400"
             >
@@ -179,357 +211,324 @@ export default function CreateSupportTicket() {
         </div>
       </header>
 
-      {/* Main Content Container */}
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Breadcrumb & Page Header */}
+      {/* MAIN CONTENT */}
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+        {/* BACK BUTTON */}
+        <button
+          type="button"
+          onClick={onDashboard}
+          className="mb-6 flex items-center text-sm font-medium text-slate-400 transition hover:text-sky-400"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </button>
+
+        {/* PAGE HEADING */}
         <div className="mb-8">
-          <nav
-            className="mb-2 flex text-sm text-slate-400"
-            aria-label="Breadcrumb"
-          >
-            <ol className="inline-flex items-center space-x-1 md:space-x-2">
-              <li>
-                <a href="#" className="transition hover:text-slate-200">
-                  Home
-                </a>
-              </li>
-              <li>
-                <ChevronRight className="mx-1 h-3 w-3 text-slate-600" />
-              </li>
-              <li>
-                <a href="#" className="transition hover:text-slate-200">
-                  Tickets
-                </a>
-              </li>
-              <li>
-                <ChevronRight className="mx-1 h-3 w-3 text-slate-600" />
-              </li>
-              <li className="font-medium text-sky-400">New Support Request</li>
-            </ol>
-          </nav>
+          <p className="mb-1 text-sm font-medium text-sky-400">
+            Support Request
+          </p>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="font-heading text-3xl font-bold tracking-tight text-white">
-                Create Support Ticket
-              </h1>
-              <p className="mt-1 text-sm text-slate-400">
-                Submit a detailed technical request to your internal IT team
-                for immediate resolution.
-              </p>
-            </div>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Create a New Ticket
+          </h1>
 
-            {/* SLA Notice Tag */}
-            <div className="inline-flex items-center self-start rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs text-slate-300 sm:self-auto">
-              <Clock className="mr-2 h-4 w-4 text-sky-400" />
-              <span>
-                Target First Response:{" "}
-                <strong className="font-semibold text-white">
-                  &lt; 2 Hours
-                </strong>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+            Describe the issue you are experiencing.
+            Your ticket will be submitted to an
+            administrator for review before it is
+            added to the technician queue.
+          </p>
+        </div>
+
+        {/* WORKFLOW INFO */}
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4">
+          <Clock className="mt-0.5 h-5 w-5 flex-shrink-0 text-sky-400" />
+
+          <div>
+            <p className="text-sm font-semibold text-sky-300">
+              Admin Review Required
+            </p>
+
+            <p className="mt-1 text-sm leading-relaxed text-slate-400">
+              After submission, your ticket will
+              appear as{" "}
+              <span className="font-medium text-slate-300">
+                Pending Admin Review
               </span>
-            </div>
+              . An administrator will review the
+              request and assign a priority from P1
+              to P30 before technicians can claim it.
+            </p>
           </div>
         </div>
 
-        {/* Form Glass Card */}
-        <div
-          className="rounded-2xl border border-slate-700/80 p-6 shadow-2xl sm:p-8"
-          style={{
-            background: "rgba(30, 41, 59, 0.7)",
-            backdropFilter: "blur(12px)",
-          }}
+        {/* FORM */}
+        <form
+          onSubmit={handleSubmit}
+          className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 shadow-xl"
         >
-          {/* Global Form Error Alert */}
-          {Object.keys(errors).length > 0 && (
-            <div className="mb-6 flex items-start space-x-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400">
-              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
-              <div>
-                <span className="mb-0.5 block font-semibold">
-                  Please fix the highlighted errors before submitting:
-                </span>
-                <ul className="list-inside list-disc space-y-0.5 text-xs text-rose-300">
-                  {Object.values(errors).map((err) => (
-                    <li key={err}>{err}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
+          <div className="border-b border-slate-800 px-6 py-5">
+            <h2 className="flex items-center text-lg font-semibold text-white">
+              <FileText className="mr-2 h-5 w-5 text-sky-400" />
+              Ticket Information
+            </h2>
 
-          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
-            {/* 1. Ticket Title */}
+            <p className="mt-1 text-sm text-slate-400">
+              Provide as much detail as possible so
+              the IT team can understand the issue.
+            </p>
+          </div>
+
+          <div className="space-y-6 p-6">
+            {/* TITLE */}
             <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label
-                  htmlFor="ticketTitle"
-                  className="block text-sm font-medium text-slate-200"
-                >
-                  Ticket Title <span className="text-rose-400">*</span>
-                </label>
-                <span className="text-xs text-slate-500">
-                  Keep it short & concise
-                </span>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="ticketTitle"
-                  name="title"
-                  required
-                  value={form.title}
-                  onChange={handleChange("title")}
-                  placeholder="e.g., Laptop screen flickers during Zoom video calls"
-                  className={`w-full rounded-xl border bg-slate-950 py-3 pl-11 pr-4 text-sm text-slate-50 placeholder-slate-500 transition focus:outline-none focus:ring-[3px] ${
-                    errors.title
-                      ? "border-rose-400 focus:ring-rose-400/15"
-                      : "border-slate-700 focus:border-sky-400 focus:ring-sky-400/15"
-                  }`}
-                />
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
-                  <span className="text-sm">✎</span>
-                </div>
-              </div>
-              {errors.title && (
-                <span className="mt-1 block text-xs text-rose-400">
-                  {errors.title}
-                </span>
-              )}
-            </div>
-
-            {/* 2. Category */}
-            <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label
-                  htmlFor="ticketCategory"
-                  className="mb-1.5 block text-sm font-medium text-slate-200"
-                >
-                  Category <span className="text-rose-400">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    id="ticketCategory"
-                    name="category"
-                    required
-                    value={form.category}
-                    onChange={handleChange("category")}
-                    className={`w-full cursor-pointer appearance-none rounded-xl border bg-slate-950 py-3 pl-11 pr-10 text-sm text-slate-50 transition focus:outline-none focus:ring-[3px] ${
-                      errors.category
-                        ? "border-rose-400 focus:ring-rose-400/15"
-                        : "border-slate-700 focus:border-sky-400 focus:ring-sky-400/15"
-                    }`}
-                  >
-                    <option value="" disabled>
-                      Select issue category...
-                    </option>
-                    {CATEGORY_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
-                    <Layers className="h-4 w-4" />
-                  </div>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500">
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-                {errors.category && (
-                  <span className="mt-1 block text-xs text-rose-400">
-                    {errors.category}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* 3. Detailed Description */}
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label
-                  htmlFor="ticketDescription"
-                  className="block text-sm font-medium text-slate-200"
-                >
-                  Detailed Description <span className="text-rose-400">*</span>
-                </label>
-                <span
-                  className={`text-xs ${
-                    charCount >= 900 ? "text-amber-400" : "text-slate-500"
-                  }`}
-                >
-                  {charCount} / 1000 chars
-                </span>
-              </div>
-              <textarea
-                id="ticketDescription"
-                name="description"
-                rows={5}
-                required
-                maxLength={1000}
-                value={form.description}
-                onChange={handleChange("description")}
-                placeholder="Please describe what happened, steps to reproduce the problem, error messages displayed, and any troubleshooting steps you've already attempted..."
-                className={`w-full resize-y rounded-xl border bg-slate-950 p-4 text-sm text-slate-50 placeholder-slate-500 transition focus:outline-none focus:ring-[3px] ${
-                  errors.description
-                    ? "border-rose-400 focus:ring-rose-400/15"
-                    : "border-slate-700 focus:border-sky-400 focus:ring-sky-400/15"
-                }`}
-              />
-              {errors.description && (
-                <span className="mt-1 block text-xs text-rose-400">
-                  {errors.description}
-                </span>
-              )}
-            </div>
-
-            {/* 4. File Attachment Drop Area */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-200">
-                Screenshots or Error Logs{" "}
-                <span className="text-xs font-normal text-slate-400">
-                  (Optional)
+              <label
+                htmlFor="title"
+                className="mb-2 block text-sm font-medium text-slate-200"
+              >
+                Ticket Title
+                <span className="ml-1 text-rose-400">
+                  *
                 </span>
               </label>
 
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  setDragActive(true);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragActive(true);
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  setDragActive(false);
-                }}
-                onDrop={onDrop}
-                className={`cursor-pointer rounded-2xl border-2 border-dashed bg-slate-900/50 p-6 text-center transition ${
-                  dragActive
-                    ? "border-sky-400 bg-sky-400/[0.08]"
-                    : "border-slate-700 hover:border-slate-500"
-                }`}
-              >
+              <div className="relative">
+                <FileText className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-500" />
+
                 <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  multiple
-                  accept="image/*,.pdf,.log,.txt"
-                  onChange={(e) => handleFiles(e.target.files)}
+                  id="title"
+                  name="title"
+                  type="text"
+                  value={form.title}
+                  onChange={handleChange}
+                  placeholder="Example: Unable to connect to company VPN"
+                  className={`w-full rounded-xl border bg-slate-950/70 py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 ${
+                    errors.title
+                      ? "border-rose-500 focus:border-rose-400"
+                      : "border-slate-700 focus:border-sky-400"
+                  }`}
                 />
-
-                <div className="flex flex-col items-center justify-center space-y-2">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-sky-400">
-                    <UploadCloud className="h-5 w-5" />
-                  </div>
-                  <div className="text-sm text-slate-300">
-                    <span className="font-semibold text-sky-400 hover:underline">
-                      Click to upload
-                    </span>{" "}
-                    or drag and drop files here
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    PNG, JPG, PDF, or TXT up to 10MB each
-                  </p>
-                </div>
-
-                {files.length > 0 && (
-                  <div className="mt-4 space-y-2 text-left">
-                    {files.map((file, idx) => (
-                      <div
-                        key={`${file.name}-${idx}`}
-                        className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/90 p-2.5 text-xs text-slate-200"
-                      >
-                        <div className="flex items-center space-x-2 truncate">
-                          <Paperclip className="h-3.5 w-3.5 text-sky-400" />
-                          <span className="truncate font-medium">
-                            {file.name}
-                          </span>
-                          <span className="text-slate-500">
-                            ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
-                        <Check className="ml-2 h-3.5 w-3.5 text-emerald-400" />
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
+
+              {errors.title && (
+                <p className="mt-2 text-xs text-rose-400">
+                  {errors.title}
+                </p>
+              )}
             </div>
 
-            <hr className="my-6 border-slate-800" />
-
-            {/* 5. Form Action Buttons */}
-            <div className="flex flex-col-reverse items-center justify-between gap-4 sm:flex-row">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="flex w-full items-center justify-center rounded-xl border border-slate-700 px-5 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white sm:w-auto"
+            {/* CATEGORY */}
+            <div>
+              <label
+                htmlFor="category"
+                className="mb-2 block text-sm font-medium text-slate-200"
               >
-                <RotateCcw className="mr-2 h-3.5 w-3.5" /> Reset Form
-              </button>
+                Category
+                <span className="ml-1 text-rose-400">
+                  *
+                </span>
+              </label>
 
-              <div className="flex w-full items-center gap-3 sm:w-auto">
-                <a
-                  href="#"
-                  className="w-full rounded-xl px-5 py-3 text-center text-sm font-medium text-slate-400 transition hover:text-slate-200 sm:w-auto"
-                >
-                  Cancel
-                </a>
+              <div className="relative">
+                <Tag className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-500" />
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className={`flex w-full transform items-center justify-center rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition active:scale-95 sm:w-auto ${
-                    submitted
-                      ? "bg-gradient-to-r from-emerald-500 to-emerald-600"
-                      : "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500"
+                <select
+                  id="category"
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  className={`w-full appearance-none rounded-xl border bg-slate-950/70 py-3 pl-10 pr-4 text-sm outline-none transition ${
+                    form.category
+                      ? "text-white"
+                      : "text-slate-500"
+                  } ${
+                    errors.category
+                      ? "border-rose-500 focus:border-rose-400"
+                      : "border-slate-700 focus:border-sky-400"
                   }`}
                 >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
-                      Submitting...
-                    </>
-                  ) : submitted ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" /> Created!
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" /> Submit Ticket
-                    </>
-                  )}
-                </button>
+                  <option value="">
+                    Select a category...
+                  </option>
+
+                  {categories.map((category) => (
+                    <option
+                      key={category}
+                      value={category}
+                    >
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {errors.category && (
+                <p className="mt-2 text-xs text-rose-400">
+                  {errors.category}
+                </p>
+              )}
+            </div>
+
+            {/* DESCRIPTION */}
+            <div>
+              <label
+                htmlFor="description"
+                className="mb-2 block text-sm font-medium text-slate-200"
+              >
+                Description
+                <span className="ml-1 text-rose-400">
+                  *
+                </span>
+              </label>
+
+              <div className="relative">
+                <AlignLeft className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-500" />
+
+                <textarea
+                  id="description"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  rows={7}
+                  placeholder="Describe the issue, when it started, any error messages you are seeing, and any troubleshooting you have already tried..."
+                  className={`w-full resize-none rounded-xl border bg-slate-950/70 py-3 pl-10 pr-4 text-sm leading-relaxed text-white outline-none transition placeholder:text-slate-600 ${
+                    errors.description
+                      ? "border-rose-500 focus:border-rose-400"
+                      : "border-slate-700 focus:border-sky-400"
+                  }`}
+                />
+              </div>
+
+              <div className="mt-2 flex justify-between">
+                {errors.description ? (
+                  <p className="text-xs text-rose-400">
+                    {errors.description}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Include relevant details that may
+                    help diagnose the problem.
+                  </p>
+                )}
+
+                <p className="text-xs text-slate-600">
+                  {form.description.length} characters
+                </p>
               </div>
             </div>
-          </form>
-        </div>
+
+            {/* ATTACHMENTS */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-200">
+                Attachments
+                <span className="ml-2 text-xs font-normal text-slate-500">
+                  Optional
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950/40 px-6 py-8 text-center transition hover:border-sky-500/60 hover:bg-sky-500/5">
+                <Paperclip className="mb-3 h-6 w-6 text-slate-500" />
+
+                <span className="text-sm font-medium text-slate-300">
+                  Click to attach files
+                </span>
+
+                <span className="mt-1 text-xs text-slate-500">
+                  Screenshots, documents, or other
+                  files related to the issue
+                </span>
+
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+
+              {/* SELECTED FILES */}
+              {files.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {files.map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3"
+                    >
+                      <div className="flex min-w-0 items-center">
+                        <Paperclip className="mr-3 h-4 w-4 flex-shrink-0 text-sky-400" />
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-300">
+                            {file.name}
+                          </p>
+
+                          <p className="text-xs text-slate-600">
+                            {Math.max(
+                              1,
+                              Math.round(file.size / 1024)
+                            )}{" "}
+                            KB
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeFile(index)
+                        }
+                        className="ml-4 rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-rose-400"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* FORM FOOTER */}
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-950/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500">
+              <span className="text-rose-400">*</span>{" "}
+              Required fields
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onDashboard}
+                disabled={submitting}
+                className="rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/30 transition hover:from-sky-400 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send className="mr-2 h-4 w-4" />
+
+                {submitting
+                  ? "Submitting..."
+                  : "Submit for Review"}
+              </button>
+            </div>
+          </div>
+        </form>
       </main>
 
-      {/* Floating Toast Notification */}
-      <div
-        className={`fixed bottom-6 right-6 z-50 flex max-w-md items-center space-x-3 rounded-2xl border border-emerald-500/40 bg-slate-800 p-4 text-white shadow-2xl transition-all duration-400 ${
-          toast.show
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none translate-y-24 opacity-0"
-        }`}
-      >
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
-          <CheckCircle2 className="h-5 w-5" />
+      {/* FOOTER */}
+      <footer className="border-t border-slate-800 bg-slate-900/30">
+        <div className="mx-auto max-w-7xl px-4 py-5 text-center text-xs text-slate-600 sm:px-6">
+          Cloud IT Desk • Support Ticket Management
+          System
         </div>
-        <div>
-          <h4 className="text-sm font-bold text-slate-100">
-            Ticket #{toast.ticketNum} Created!
-          </h4>
-          <p className="text-xs text-slate-300">
-            Your ticket was sent to the IT Queue. Redirecting to Dashboard...
-          </p>
-        </div>
-      </div>
+      </footer>
     </div>
   );
 }
