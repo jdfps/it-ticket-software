@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 import Login from "./pages/Login";
@@ -137,8 +138,7 @@ export default function App() {
 
     const foundUser = users.find(
       (user) =>
-        user.email.toLowerCase() ===
-          email.trim().toLowerCase() &&
+        user.email.toLowerCase() === email.trim().toLowerCase() &&
         user.password === password
     );
 
@@ -150,9 +150,7 @@ export default function App() {
     setLoginError("");
     setCurrentUser(foundUser);
 
-    // IMPORTANT:
-    // Use foundUser here instead of currentUser.
-    // React state does not update immediately.
+    // First-time users must create their own password.
     if (foundUser.mustChangePassword) {
       setCurrentPage("set-password");
     } else {
@@ -179,9 +177,7 @@ export default function App() {
 
     setUsers((previousUsers) =>
       previousUsers.map((user) =>
-        user.user_id === currentUser.user_id
-          ? updatedUser
-          : user
+        user.user_id === currentUser.user_id ? updatedUser : user
       )
     );
 
@@ -198,6 +194,51 @@ export default function App() {
     setCurrentUser(null);
     setCurrentPage("login");
     setLoginError("");
+  };
+
+  // ================================================
+  // ADMIN - CREATE USER
+  // ================================================
+
+  const handleCreateUser = (newUserData) => {
+    if (!currentUser || currentUser.role !== "admin") {
+      return false;
+    }
+
+    const email = newUserData?.email?.trim().toLowerCase();
+
+    if (!email) {
+      return false;
+    }
+
+    // Don't allow duplicate email addresses.
+    const emailAlreadyExists = users.some(
+      (user) => user.email.toLowerCase() === email
+    );
+
+    if (emailAlreadyExists) {
+      return false;
+    }
+
+    // Find the next available user ID.
+    const nextUserId =
+      users.length > 0
+        ? Math.max(...users.map((user) => user.user_id)) + 1
+        : 1;
+
+    const newUser = {
+      user_id: nextUserId,
+      firstName: newUserData.firstName.trim(),
+      lastName: newUserData.lastName.trim(),
+      email: email,
+      password: newUserData.temporaryPassword,
+      role: newUserData.role,
+      mustChangePassword: true,
+    };
+
+    setUsers((previousUsers) => [...previousUsers, newUser]);
+
+    return true;
   };
 
   // ================================================
@@ -469,9 +510,12 @@ export default function App() {
   ) {
     return (
       <CreateUser
+        user={currentUser}
+        onCreateUser={handleCreateUser}
         onDashboard={() =>
           setCurrentPage("admin-dashboard")
         }
+        onLogout={handleLogout}
       />
     );
   }
@@ -497,11 +541,6 @@ export default function App() {
 
   // ================================================
   // ADMIN DASHBOARD
-  //
-  // IMPORTANT:
-  // This checks ROLE instead of currentPage.
-  // Therefore an admin cannot accidentally render
-  // UserDashboard.
   // ================================================
 
   if (currentUser.role === "admin") {
@@ -539,8 +578,6 @@ export default function App() {
 
   // ================================================
   // EMPLOYEE DASHBOARD
-  //
-  // Only employees can reach this point.
   // ================================================
 
   return (

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 import {
@@ -37,6 +38,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function CreateUser({
+  onCreateUser,
   onDashboard,
 }) {
   const [form, setForm] = useState(INITIAL_FORM);
@@ -202,7 +204,7 @@ export default function CreateUser({
       const temporaryPassword =
         generateTemporaryPassword();
 
-      setCreatedUser({
+      const newUser = {
         firstName:
           form.firstName.trim(),
 
@@ -218,7 +220,24 @@ export default function CreateUser({
         temporaryPassword,
 
         mustChangePassword: true,
-      });
+      };
+
+      // Add the new account to the users array in App.jsx.
+      const success = onCreateUser
+        ? onCreateUser(newUser)
+        : false;
+
+      if (!success) {
+        setErrors({
+          email:
+            "A user with this email already exists.",
+        });
+
+        setSubmitting(false);
+        return;
+      }
+
+      setCreatedUser(newUser);
 
       setSubmitting(false);
       setCopied(false);
