@@ -4,3 +4,4 @@ python-dotenv
 pymysql
 sqlalchemy
 bcrypt
+email-validator
