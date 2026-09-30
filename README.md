@@ -10,123 +10,35 @@
 
 # IT Ticket Software
 
-A web-based IT help desk and ticket management system designed for use within a company. Employees can submit IT support tickets, while IT technicians can view, manage, comment on, and resolve those tickets.
+Cloud-based IT ticketing system created for our CSCI 4560 Database Management Systems project.
 
-This project is being developed as part of a Database Management Systems course and will eventually be deployed using cloud services.
+The application allows employees to submit IT support tickets, administrators to review and prioritize those tickets, and technicians to claim and resolve them.
 
-## Project Overview
+## Project Stack
 
-The IT Ticket Software allows employees within a company to report IT-related problems through a centralized ticketing system.
+- **Frontend:** React + Vite
+- **Backend:** FastAPI / Python
+- **Database:** MySQL
+- **ORM:** SQLAlchemy
 
-Employees can log into the system and create support tickets describing their issue. IT technicians can then access submitted tickets, communicate with users through comments, manage ticket information, and close tickets once the issue has been resolved.
+## How the System Works
 
-The system is designed around a MySQL relational database and uses a FastAPI backend to communicate between the database and the frontend.
+The basic ticket workflow is:
 
-## Features
+1. An employee creates a support ticket.
+2. The ticket is sent to an administrator for review.
+3. The administrator can approve or reject the ticket.
+4. If approved, the administrator assigns a priority from P1-P30.
+5. Approved tickets become available to technicians.
+6. A technician can claim a ticket and work on it.
+7. Employees and technicians can communicate through comments on the ticket.
+8. The technician resolves the ticket when the issue is finished.
 
-### Employees
+Administrators can also create employee, technician, and administrator accounts.
 
-Employees will be able to:
-
-* Log into the system
-* Create support tickets
-* View their submitted tickets
-* View ticket status
-* View ticket due dates
-* Add comments to tickets
-* Edit applicable ticket information
-
-### IT Technicians
-
-Technicians will be able to:
-
-* Log into the system
-* View tickets submitted by employees
-* View open tickets
-* View ticket due dates
-* Assign technicians to tickets
-* Add comments to tickets
-* Update ticket information
-* Close resolved tickets
-
-## Tech Stack
-
-### Frontend
-
-* HTML
-* CSS
-* JavaScript
-
-The frontend provides the user interface and communicates with the backend using HTTP requests.
-
-### Backend
-
-* Python
-* FastAPI
-* SQLAlchemy
-* Uvicorn
-
-FastAPI provides the API used by the frontend to retrieve and modify information stored in the database.
-
-### Database
-
-* MySQL
-
-MySQL stores the application's users, technicians, tickets, comments, and related information.
-
-### Cloud
-
-The completed application is planned to eventually be hosted using a cloud platform such as AWS or Azure.
-
-Development will initially be performed locally before the application is moved to the cloud.
-
-## Application Architecture
-
-The application follows a basic three-layer structure:
-
-```text
-Frontend
-   |
-   | HTTP Requests
-   v
-FastAPI Backend
-   |
-   | SQL Queries / SQLAlchemy
-   v
-MySQL Database
-```
-
-The frontend should never communicate directly with the MySQL database.
-
-Instead, the frontend sends requests to the FastAPI backend.
-
-For example:
-
-```text
-User opens ticket page
-        |
-        v
-JavaScript sends GET /tickets
-        |
-        v
-FastAPI receives request
-        |
-        v
-FastAPI queries MySQL
-        |
-        v
-MySQL returns ticket data
-        |
-        v
-FastAPI returns JSON
-        |
-        v
-JavaScript displays tickets
-```
+New users are given a temporary password and are required to create a new password the first time they log in.
 
 ## Project Structure
-
-The project is organized into three main sections:
 
 ```text
 it-ticket-software/
@@ -135,106 +47,76 @@ it-ticket-software/
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── database.py
-│   │   └── ...
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── security.py
+│   │   └── routers/
 │   │
-│   ├── .env
-│   └── requirements.txt
-│
-├── database/
 │   ├── schema.sql
-│   └── ...
+│   ├── requirements.txt
+│   └── .env
 │
 ├── frontend/
-│   ├── index.html
-│   ├── index.css
+│   ├── src/
+│   │   ├── api/
+│   │   ├── pages/
+│   │   ├── App.jsx
+│   │   └── main.jsx
 │   │
-│   ├── pages/
-│   │   ├── login.html
-│   │   └── ...
-│   │
-│   └── js/
-│       └── ...
+│   ├── package.json
+│   └── vite.config.js
 │
-├── .gitignore
 └── README.md
 ```
 
-The structure may change as additional features are added.
+---
 
-## Database
+# Setup
 
-The database is built using MySQL.
+You will need the following installed:
 
-The initial database contains the core tables required by the ticket system, including:
+- Python 3
+- Node.js / npm
+- MySQL Server
+- MySQL Workbench (recommended)
+- Git
 
-* Users
-* Technicians
-* Tickets
-* Comments
-
-Additional tables and relationships may be added as the project develops.
-
-The database schema is stored inside:
-
-```text
-database/schema.sql
-```
-
-The schema file allows team members to recreate the database on their own local MySQL installation.
-
-## Database Relationships
-
-The general relationship between the main tables is:
-
-```text
-USERS
-  |
-  | creates
-  v
-TICKETS
-  |
-  | assigned to
-  v
-TECHNICIANS
-
-USERS / TECHNICIANS
-  |
-  | add
-  v
-COMMENTS
-  |
-  | belong to
-  v
-TICKETS
-```
-
-Foreign keys are used to connect related records between tables.
-
-For example, a ticket can contain the ID of the employee who created it and the ID of the technician assigned to it.
-
-## Local Development Setup
-
-### 1. Clone the Repository
+Clone the repository:
 
 ```bash
-git clone <repository-url>
-```
-
-Enter the project directory:
-
-```bash
+git clone https://github.com/jdfps/it-ticket-software.git
 cd it-ticket-software
 ```
 
-## 2. Create a Python Virtual Environment
+---
 
-Enter the backend directory:
+# Backend Setup
 
-```bash
-cd backend
+The backend uses Python, FastAPI, SQLAlchemy, and MySQL.
+
+## 1. Create a Virtual Environment
+
+From the main project folder:
+
+### Windows PowerShell
+
+```powershell
+python -m venv .venv
 ```
 
-Create the virtual environment:
+Activate it:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+If it worked, your terminal should look similar to:
+
+```text
+(.venv) PS C:\...\it-ticket-software>
+```
+
+### macOS / Linux
 
 ```bash
 python3 -m venv .venv
@@ -246,210 +128,284 @@ Activate it:
 source .venv/bin/activate
 ```
 
-## 3. Install Python Dependencies
+Your terminal should now show `(.venv)`.
 
-Install the required packages:
+## 2. Install Python Requirements
 
-```bash
-pip install -r requirements.txt
-```
-
-## 4. Configure MySQL
-
-Make sure MySQL Server is installed and running.
-
-Create the database by running the project's schema file.
-
-For example:
+With the virtual environment activated:
 
 ```bash
-mysql -u root -p < database/schema.sql
+pip install -r backend/requirements.txt
 ```
 
-Depending on your current directory, the path to `schema.sql` may need to be changed.
+On macOS, if `pip` is not available, use:
 
-You can also open `schema.sql` using a MySQL database management program and execute it manually.
+```bash
+python3 -m pip install -r backend/requirements.txt
+```
 
-## 5. Configure Environment Variables
+---
 
-Database credentials should not be stored directly inside the Python source code.
+# Database Setup
 
-Create a `.env` file inside the backend directory.
-
-Example:
+Open MySQL Workbench and run:
 
 ```text
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=it_ticket_system
+backend/schema.sql
 ```
 
-Each developer should use their own local MySQL username and password.
+This creates the `TMS` database and the tables needed by the application.
 
-The `.env` file should be included in `.gitignore` and should never be pushed to GitHub.
+The database contains tables for:
 
-## 6. Start the FastAPI Backend
+- Users
+- Tickets
+- Categories
+- Comments
 
-From the backend directory with the virtual environment activated, start the development server.
+It also adds the default ticket categories.
 
-For example:
+## Create the `.env` File
+
+Inside the `backend` folder, create:
+
+```text
+.env
+```
+
+Add your own MySQL information:
+
+```env
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_HOST=localhost
+DB_NAME=TMS
+```
+
+Do not commit the `.env` file to GitHub because it contains your database password.
+
+---
+
+# Running the Backend
+
+Make sure the virtual environment is activated.
+
+Move into the backend folder:
+
+### Windows
+
+```powershell
+cd backend
+```
+
+### macOS / Linux
+
+```bash
+cd backend
+```
+
+Start FastAPI:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The backend should then run locally on port `8000`.
-
-The FastAPI interactive API documentation can also be accessed through the `/docs` endpoint while the backend is running.
-
-## 7. Start the Frontend
-
-The frontend files are located inside:
+The backend should start at:
 
 ```text
-frontend/
+http://127.0.0.1:8000
 ```
 
-During development, the frontend can be opened using a local development server such as the VS Code Live Server extension.
-
-The frontend JavaScript can communicate with the FastAPI backend using requests such as:
-
-```javascript
-fetch("http://127.0.0.1:8000/tickets")
-```
-
-## API
-
-The FastAPI backend will provide endpoints used by the frontend.
-
-Examples of endpoints that may be implemented include:
+FastAPI's Swagger documentation is available at:
 
 ```text
-GET    /tickets
-GET    /tickets/{ticket_id}
-POST   /tickets
-PUT    /tickets/{ticket_id}
-DELETE /tickets/{ticket_id}
-
-GET    /users
-POST   /users
-
-GET    /technicians
-
-GET    /tickets/{ticket_id}/comments
-POST   /tickets/{ticket_id}/comments
+http://127.0.0.1:8000/docs
 ```
 
-The exact API structure may change as development continues.
+You can use the Swagger page to view and test the API routes.
 
-## Git Workflow
+---
 
-The `main` branch should contain the stable version of the project.
+# Frontend Setup
 
-Team members should create branches when working on new features.
+Open another terminal.
 
-Create a branch:
+Move into the frontend folder:
 
 ```bash
-git checkout -b feature-name
+cd frontend
 ```
+
+Install the frontend packages:
+
+```bash
+npm install
+```
+
+Then start the React development server:
+
+```bash
+npm run dev
+```
+
+Vite should display an address similar to:
+
+```text
+http://localhost:5173
+```
+
+Open that address in your browser.
+
+Keep both the FastAPI backend and React frontend running while using the application.
+
+---
+
+# Running the Whole Project
+
+After the initial setup, you normally only need two terminals.
+
+### Terminal 1 - Backend
+
+From the project folder, activate the virtual environment.
+
+Windows:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+cd backend
+uvicorn app.main:app --reload
+```
+
+macOS / Linux:
+
+```bash
+source .venv/bin/activate
+cd backend
+uvicorn app.main:app --reload
+```
+
+### Terminal 2 - Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:5173
+```
+
+---
+
+# Creating the First Admin Account
+
+Because administrators normally create new users through the application, a new database will not initially have an account that can log in.
+
+Start the backend and go to:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Find:
+
+```text
+POST /users
+```
+
+Use it to create the first administrator.
 
 Example:
 
-```bash
-git checkout -b login-page
+```json
+{
+  "first_name": "Admin",
+  "last_name": "User",
+  "email": "admin@test.com",
+  "role": "admin",
+  "temporary_password": "Admin123!"
+}
 ```
 
-Make changes and commit them:
+You can then log into the React application using that email and temporary password.
 
-```bash
-git add .
-git commit -m "Create login page"
+The application will require the administrator to create a new password after the first login.
+
+After that, additional users can be created from the Admin Dashboard.
+
+---
+
+# User Roles
+
+### Employee
+
+Employees can:
+
+- Create support tickets
+- View their tickets
+- View ticket status
+- Communicate with technicians through comments
+
+### Technician
+
+Technicians can:
+
+- View available tickets
+- Claim tickets
+- View assigned tickets
+- Communicate with employees
+- Resolve tickets
+
+### Administrator
+
+Administrators can:
+
+- Review new tickets
+- Approve or reject tickets
+- Assign ticket priority
+- Create users
+- Monitor tickets
+
+---
+
+# Ticket Status
+
+Tickets move through several statuses:
+
+```text
+pending
+   ↓
+  open
+   ↓
+in_progress
+   ↓
+resolved
 ```
 
-Push the branch:
+A ticket can also become:
 
-```bash
-git push -u origin login-page
+```text
+rejected
 ```
 
-The changes can then be reviewed and merged into `main`.
+A newly submitted ticket starts as `pending`.
 
-Before beginning new work, team members should make sure their local `main` branch is updated:
+Once an administrator approves it, it becomes `open`.
 
-```bash
-git checkout main
-git pull
-```
+When a technician claims the ticket, it becomes `in_progress`.
 
-Then create a new branch from the updated `main` branch.
+When the technician finishes the issue, it becomes `resolved`.
 
-## Development Plan
+---
 
-The project will be developed in stages.
+# Notes
 
-### Initial Development
-
-* Create MySQL database
-* Create project structure
-* Connect FastAPI to MySQL
-* Create basic frontend
-* Create login interface
-
-### Core Functionality
-
-* User authentication
-* Create tickets
-* View tickets
-* Edit tickets
-* Assign technicians
-* Add comments
-* Manage due dates
-* Close tickets
-
-### Final Development
-
-* Improve frontend design
-* Add validation and error handling
-* Improve security
-* Test database relationships
-* Test API endpoints
-* Deploy application to the cloud
-
-## Security
-
-Sensitive information should never be committed to the repository.
-
-This includes:
-
-* Database passwords
-* API keys
-* Cloud credentials
-* Secret keys
-* Authentication secrets
-
-These values should be stored in environment variables or `.env` files that are excluded through `.gitignore`.
-
-## Project Goal
-
-The goal of this project is to demonstrate how a relational database can be integrated into a complete web application.
-
-The project demonstrates concepts including:
-
-* Relational database design
-* Primary keys
-* Foreign keys
-* SQL queries
-* Database relationships
-* REST APIs
-* Backend development
-* Frontend/backend communication
-* User authentication
-* Git and GitHub collaboration
-* Cloud deployment
-
-## Contributors
-
-Developed as a group project for a Database Management Systems course at Middle Tennessee State University.
+- The backend must be running for the frontend to communicate with the database.
+- MySQL must also be running.
+- New users must change their temporary password when they first log in.
+- Ticket comments automatically refresh while the application is open.
+- Refreshing the browser does not immediately log the user out.
+- Users are automatically logged out after a period of inactivity.
+- File attachments are not currently part of the project.
