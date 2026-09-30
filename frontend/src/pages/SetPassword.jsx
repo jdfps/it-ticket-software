@@ -33,8 +33,7 @@ export default function SetPassword({ user, onPasswordSet }) {
       newErrors.password =
         "Password must contain at least one lowercase letter.";
     } else if (!/[0-9]/.test(password)) {
-      newErrors.password =
-        "Password must contain at least one number.";
+      newErrors.password = "Password must contain at least one number.";
     } else if (!/[!@#$%^&*]/.test(password)) {
       newErrors.password =
         "Password must contain at least one special character.";
@@ -49,10 +48,11 @@ export default function SetPassword({ user, onPasswordSet }) {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = validate();
+
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
@@ -61,18 +61,17 @@ export default function SetPassword({ user, onPasswordSet }) {
 
     setSubmitting(true);
 
-    // Simulated password update.
-    // This will eventually become a FastAPI request.
-    setTimeout(() => {
-      setSubmitting(false);
-      setSuccess(true);
+    try {
+      await onPasswordSet(password);
 
-      setTimeout(() => {
-        if (onPasswordSet) {
-          onPasswordSet(password);
-        }
-      }, 800);
-    }, 700);
+      setSuccess(true);
+    } catch (error) {
+      setErrors({
+        submit: error.message || "Unable to update password.",
+      });
+
+      setSubmitting(false);
+    }
   };
 
   const handlePasswordChange = (e) => {
@@ -144,8 +143,8 @@ export default function SetPassword({ user, onPasswordSet }) {
               </h1>
 
               <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                You're signing in for the first time. Create a new
-                password before continuing to your dashboard.
+                You're signing in for the first time. Create a new password
+                before continuing to your dashboard.
               </p>
 
               {user?.email && (
@@ -161,16 +160,12 @@ export default function SetPassword({ user, onPasswordSet }) {
                 <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
 
                 <span>
-                  Please fix the highlighted fields below.
+                  {errors.submit || "Please fix the highlighted fields below."}
                 </span>
               </div>
             )}
 
-            <form
-              className="space-y-5"
-              onSubmit={handleSubmit}
-              noValidate
-            >
+            <form className="space-y-5" onSubmit={handleSubmit} noValidate>
               {/* New Password */}
               <div>
                 <label
@@ -201,15 +196,9 @@ export default function SetPassword({ user, onPasswordSet }) {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPassword((prev) => !prev)
-                    }
+                    onClick={() => setShowPassword((prev) => !prev)}
                     className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500 transition hover:text-slate-300"
-                    title={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
+                    title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -238,9 +227,7 @@ export default function SetPassword({ user, onPasswordSet }) {
                 <div className="relative">
                   <input
                     id="confirmPassword"
-                    type={
-                      showConfirmPassword ? "text" : "password"
-                    }
+                    type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={handleConfirmPasswordChange}
                     placeholder="Re-enter your new password"
@@ -258,14 +245,10 @@ export default function SetPassword({ user, onPasswordSet }) {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowConfirmPassword((prev) => !prev)
-                    }
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
                     className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500 transition hover:text-slate-300"
                     title={
-                      showConfirmPassword
-                        ? "Hide password"
-                        : "Show password"
+                      showConfirmPassword ? "Hide password" : "Show password"
                     }
                   >
                     {showConfirmPassword ? (
@@ -325,9 +308,7 @@ export default function SetPassword({ user, onPasswordSet }) {
               <CheckCircle2 className="h-7 w-7" />
             </div>
 
-            <h2 className="text-xl font-bold text-white">
-              Password Created
-            </h2>
+            <h2 className="text-xl font-bold text-white">Password Created</h2>
 
             <p className="mt-2 text-sm text-slate-400">
               Your password has been updated successfully.

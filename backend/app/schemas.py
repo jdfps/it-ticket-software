@@ -72,7 +72,7 @@ class TicketCreate(BaseModel):
 
 
 class TicketApprove(BaseModel):
-    priority: int = Field(ge=1, le=5)
+    priority: int = Field(ge=1, le=30)
 
 
 class TicketClaim(BaseModel):

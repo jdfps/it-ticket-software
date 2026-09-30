@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import {
   CloudLightning,
   PieChart,
   PlusCircle,
   LogOut,
-  Paperclip,
-  X,
   Send,
   ArrowLeft,
   FileText,
@@ -13,6 +12,8 @@ import {
   AlignLeft,
   Clock,
 } from "lucide-react";
+
+import { getCategories } from "../api/api";
 
 export default function CreateSupportTicket({
   user,
@@ -26,24 +27,42 @@ export default function CreateSupportTicket({
     description: "",
   });
 
-  const [files, setFiles] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-
-  const categories = [
-    "Hardware",
-    "Software",
-    "Network",
-    "Account / Access",
-    "Email",
-    "Security",
-    "Other",
-  ];
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoryError, setCategoryError] = useState("");
 
   const initials =
     `${user?.firstName?.[0] || ""}${
       user?.lastName?.[0] || ""
     }`.toUpperCase();
+
+  // --------------------------------
+  // LOAD CATEGORIES FROM FASTAPI
+  // --------------------------------
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        setCategoryError("");
+
+        const data = await getCategories();
+
+        setCategories(data);
+      } catch (error) {
+        setCategoryError(
+          error.message ||
+            "Unable to load ticket categories."
+        );
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   // --------------------------------
   // FORM CHANGE
@@ -57,11 +76,17 @@ export default function CreateSupportTicket({
       [name]: value,
     }));
 
-    // Remove the error once the user starts fixing the field.
     if (errors[name]) {
       setErrors((previousErrors) => ({
         ...previousErrors,
         [name]: "",
+      }));
+    }
+
+    if (errors.submit) {
+      setErrors((previousErrors) => ({
+        ...previousErrors,
+        submit: "",
       }));
     }
   };
@@ -74,11 +99,13 @@ export default function CreateSupportTicket({
     const newErrors = {};
 
     if (!form.title.trim()) {
-      newErrors.title = "Please enter a ticket title.";
+      newErrors.title =
+        "Please enter a ticket title.";
     }
 
     if (!form.category) {
-      newErrors.category = "Please select a category.";
+      newErrors.category =
+        "Please select a category.";
     }
 
     if (!form.description.trim()) {
@@ -90,37 +117,14 @@ export default function CreateSupportTicket({
   };
 
   // --------------------------------
-  // FILE ATTACHMENTS
+  // SUBMIT TICKET TO FASTAPI
   // --------------------------------
 
-  const handleFileChange = (event) => {
-    const selectedFiles = Array.from(event.target.files || []);
-
-    setFiles((previousFiles) => [
-      ...previousFiles,
-      ...selectedFiles,
-    ]);
-
-    // Allows the same file to be selected again later.
-    event.target.value = "";
-  };
-
-  const removeFile = (indexToRemove) => {
-    setFiles((previousFiles) =>
-      previousFiles.filter(
-        (_, index) => index !== indexToRemove
-      )
-    );
-  };
-
-  // --------------------------------
-  // SUBMIT TICKET
-  // --------------------------------
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const newErrors = validate();
+
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
@@ -129,12 +133,22 @@ export default function CreateSupportTicket({
 
     setSubmitting(true);
 
-    onSubmitTicket({
-      title: form.title.trim(),
-      category: form.category,
-      description: form.description.trim(),
-      files,
-    });
+    try {
+      await onSubmitTicket({
+        user_id: user.user_id,
+        category_id: Number(form.category),
+        title: form.title.trim(),
+        description: form.description.trim(),
+      });
+    } catch (error) {
+      setErrors({
+        submit:
+          error.message ||
+          "Unable to create ticket.",
+      });
+
+      setSubmitting(false);
+    }
   };
 
   // --------------------------------
@@ -184,7 +198,8 @@ export default function CreateSupportTicket({
           <div className="flex items-center gap-4">
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-slate-100">
-                {user?.firstName} {user?.lastName}
+                {user?.firstName}{" "}
+                {user?.lastName}
               </p>
 
               <p className="text-xs text-slate-400">
@@ -263,6 +278,15 @@ export default function CreateSupportTicket({
           </div>
         </div>
 
+        {/* CATEGORY API ERROR */}
+        {categoryError && (
+          <div className="mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+            <p className="text-sm text-rose-300">
+              {categoryError}
+            </p>
+          </div>
+        )}
+
         {/* FORM */}
         <form
           onSubmit={handleSubmit}
@@ -338,7 +362,11 @@ export default function CreateSupportTicket({
                   name="category"
                   value={form.category}
                   onChange={handleChange}
-                  className={`w-full appearance-none rounded-xl border bg-slate-950/70 py-3 pl-10 pr-4 text-sm outline-none transition ${
+                  disabled={
+                    loadingCategories ||
+                    Boolean(categoryError)
+                  }
+                  className={`w-full appearance-none rounded-xl border bg-slate-950/70 py-3 pl-10 pr-4 text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     form.category
                       ? "text-white"
                       : "text-slate-500"
@@ -349,17 +377,27 @@ export default function CreateSupportTicket({
                   }`}
                 >
                   <option value="">
-                    Select a category...
+                    {loadingCategories
+                      ? "Loading categories..."
+                      : "Select a category..."}
                   </option>
 
-                  {categories.map((category) => (
-                    <option
-                      key={category}
-                      value={category}
-                    >
-                      {category}
-                    </option>
-                  ))}
+                  {categories.map(
+                    (category) => (
+                      <option
+                        key={
+                          category.category_id
+                        }
+                        value={
+                          category.category_id
+                        }
+                      >
+                        {
+                          category.category_name
+                        }
+                      </option>
+                    )
+                  )}
                 </select>
               </div>
 
@@ -418,81 +456,22 @@ export default function CreateSupportTicket({
               </div>
             </div>
 
-            {/* ATTACHMENTS */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-200">
-                Attachments
-                <span className="ml-2 text-xs font-normal text-slate-500">
-                  Optional
-                </span>
-              </label>
-
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950/40 px-6 py-8 text-center transition hover:border-sky-500/60 hover:bg-sky-500/5">
-                <Paperclip className="mb-3 h-6 w-6 text-slate-500" />
-
-                <span className="text-sm font-medium text-slate-300">
-                  Click to attach files
-                </span>
-
-                <span className="mt-1 text-xs text-slate-500">
-                  Screenshots, documents, or other
-                  files related to the issue
-                </span>
-
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
-
-              {/* SELECTED FILES */}
-              {files.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {files.map((file, index) => (
-                    <div
-                      key={`${file.name}-${index}`}
-                      className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3"
-                    >
-                      <div className="flex min-w-0 items-center">
-                        <Paperclip className="mr-3 h-4 w-4 flex-shrink-0 text-sky-400" />
-
-                        <div className="min-w-0">
-                          <p className="truncate text-sm text-slate-300">
-                            {file.name}
-                          </p>
-
-                          <p className="text-xs text-slate-600">
-                            {Math.max(
-                              1,
-                              Math.round(file.size / 1024)
-                            )}{" "}
-                            KB
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeFile(index)
-                        }
-                        className="ml-4 rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-rose-400"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* API SUBMIT ERROR */}
+            {errors.submit && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+                <p className="text-sm text-rose-300">
+                  {errors.submit}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* FORM FOOTER */}
           <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-950/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500">
-              <span className="text-rose-400">*</span>{" "}
+              <span className="text-rose-400">
+                *
+              </span>{" "}
               Required fields
             </p>
 
@@ -508,7 +487,11 @@ export default function CreateSupportTicket({
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={
+                  submitting ||
+                  loadingCategories ||
+                  Boolean(categoryError)
+                }
                 className="flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/30 transition hover:from-sky-400 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Send className="mr-2 h-4 w-4" />

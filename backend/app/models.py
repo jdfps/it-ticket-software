@@ -101,7 +101,7 @@ class Ticket(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "priority IS NULL OR priority BETWEEN 1 AND 5",
+            "priority IS NULL OR priority BETWEEN 1 AND 30",
             name="chk_ticket_priority",
         ),
     )

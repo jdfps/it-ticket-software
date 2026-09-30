@@ -52,7 +52,7 @@ export default function Login({ onLogin }) {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = validate();
@@ -64,19 +64,25 @@ export default function Login({ onLogin }) {
 
     setSubmitting(true);
 
-    // Dummy authentication for now.
-    // FastAPI/MySQL will replace this later.
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const result = await onLogin({
+        email: form.email.trim(),
+        password: form.password,
+        remember,
+      });
 
-      if (onLogin) {
-        onLogin({
-          email: form.email.trim(),
-          password: form.password,
-          remember,
+      if (!result?.success) {
+        setErrors({
+          login: result?.message || "Invalid email or password.",
         });
       }
-    }, 700);
+    } catch (error) {
+      setErrors({
+        login: error.message || "Unable to sign in.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -110,10 +116,12 @@ export default function Login({ onLogin }) {
           backdropFilter: "blur(12px)",
         }}
       >
-        {(errors.email || errors.password) && (
+        {(errors.email || errors.password || errors.login) && (
           <div className="mb-6 flex items-start space-x-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400">
             <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
-            <span>Please fix the highlighted fields below.</span>
+            <span>
+              {errors.login || "Please fix the highlighted fields below."}
+            </span>
           </div>
         )}
 

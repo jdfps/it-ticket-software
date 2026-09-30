@@ -149,7 +149,7 @@ CREATE TABLE tickets
     CONSTRAINT chk_ticket_priority
         CHECK (
             priority IS NULL
-            OR priority BETWEEN 1 AND 5
+            OR priority BETWEEN 1 AND 30
         )
 );
 
