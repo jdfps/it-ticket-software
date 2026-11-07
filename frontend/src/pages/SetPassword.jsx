@@ -12,6 +12,8 @@ import {
 
 export default function SetPassword({ user, onPasswordSet }) {
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -21,6 +23,10 @@ export default function SetPassword({ user, onPasswordSet }) {
 
   const validate = () => {
     const newErrors = {};
+
+    if (!firstName.trim() || !lastName.trim()) {
+      newErrors.name = "Enter your first and last name to confirm your account.";
+    }
 
     if (!password) {
       newErrors.password = "New password is required.";
@@ -62,7 +68,7 @@ export default function SetPassword({ user, onPasswordSet }) {
     setSubmitting(true);
 
     try {
-      await onPasswordSet(password);
+      await onPasswordSet(password, firstName, lastName);
 
       setSuccess(true);
     } catch (error) {
@@ -143,8 +149,8 @@ export default function SetPassword({ user, onPasswordSet }) {
               </h1>
 
               <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                You're signing in for the first time. Create a new password
-                before continuing to your dashboard.
+                Confirm your first and last name, then create a new password.
+                You must sign in using the temporary password supplied by your administrator.
               </p>
 
               {user?.email && (
@@ -166,6 +172,21 @@ export default function SetPassword({ user, onPasswordSet }) {
             )}
 
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="verifyFirstName" className="mb-1.5 block text-sm font-medium text-slate-200">First name</label>
+                  <input id="verifyFirstName" value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                    autoComplete="given-name" placeholder="First name" required
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white focus:border-sky-400 focus:outline-none" />
+                </div>
+                <div>
+                  <label htmlFor="verifyLastName" className="mb-1.5 block text-sm font-medium text-slate-200">Last name</label>
+                  <input id="verifyLastName" value={lastName} onChange={(e) => setLastName(e.target.value)}
+                    autoComplete="family-name" placeholder="Last name" required
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white focus:border-sky-400 focus:outline-none" />
+                </div>
+              </div>
+              {errors.name && <p className="text-xs text-rose-400">{errors.name}</p>}
               {/* New Password */}
               <div>
                 <label

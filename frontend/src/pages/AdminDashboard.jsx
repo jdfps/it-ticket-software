@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getUsers } from "../api/api";
 import {
   CloudLightning,
   LayoutDashboard,
   Inbox,
   ListChecks,
   UserPlus,
+  Users,
+  KeyRound,
+  Copy,
   LogOut,
   Clock,
   CircleDot,
@@ -559,6 +563,93 @@ function TicketRow({ ticket }) {
   );
 }
 
+
+function AccountManagement({ onResetUserPassword, currentUserId }) {
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [busyId, setBusyId] = useState(null);
+  const [resetResult, setResetResult] = useState(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setAccounts(await getUsers());
+    } catch (err) {
+      setError(err.message || "Unable to load accounts.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  const handleReset = async (account) => {
+    if (!window.confirm(`Reset password for ${account.first_name} ${account.last_name} (${account.email})? This immediately invalidates their current password and sessions.`)) return;
+    setBusyId(account.user_id);
+    setError("");
+    setResetResult(null);
+    try {
+      const result = await onResetUserPassword(account.user_id);
+      setResetResult(result);
+      setAccounts((previous) => previous.map((item) => item.user_id === account.user_id ? { ...item, must_change_password: true } : item));
+    } catch (err) {
+      setError(err.message || "Password reset failed.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const filtered = accounts.filter((account) =>
+    `${account.first_name} ${account.last_name} ${account.email} ${account.role}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <section className="space-y-5">
+      <p className="text-sm text-slate-400">View company accounts and issue temporary passwords. Each user must log in using their temporary password, confirm their name, and choose a new password.</p>
+      <input aria-label="Search accounts" placeholder="Search name, email, or role..." value={search} onChange={(event) => setSearch(event.target.value)}
+        className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-sky-400" />
+      {error && <p role="alert" className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">{error}</p>}
+      {resetResult && (
+        <div role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5">
+          <h3 className="font-semibold text-amber-200">Temporary password created for {resetResult.email}</h3>
+          <p className="mt-2 text-sm text-slate-300">Copy and deliver this password securely. It will not be available again after you close this message. The user's old sessions have been invalidated.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <code className="break-all rounded-lg bg-slate-950 px-3 py-2 text-sm text-white">{resetResult.temporary_password}</code>
+            <button type="button" onClick={() => navigator.clipboard.writeText(resetResult.temporary_password).catch(() => setError("Couldn't copy automatically; select and copy the password."))}
+              className="flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white"><Copy className="h-4 w-4" />Copy</button>
+            <button type="button" onClick={() => setResetResult(null)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200">Close</button>
+          </div>
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <table className="w-full min-w-[650px] text-left text-sm">
+          <thead className="bg-slate-900 text-slate-400"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Username / Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Password</th><th className="px-4 py-3">Action</th></tr></thead>
+          <tbody className="divide-y divide-slate-800">
+            {filtered.map((account) => (
+              <tr key={account.user_id} className="bg-slate-950/40">
+                <td className="px-4 py-3 font-medium text-white">{account.first_name} {account.last_name}</td>
+                <td className="px-4 py-3 text-slate-300">{account.email}</td>
+                <td className="px-4 py-3 capitalize text-slate-300">{account.role}</td>
+                <td className="px-4 py-3 text-slate-300">{account.must_change_password ? "Change required" : "Set"}</td>
+                <td className="px-4 py-3"><button type="button" disabled={busyId !== null || account.user_id === currentUserId}
+                    title={account.user_id === currentUserId ? "You cannot reset your own account here" : "Issue a new temporary password"}
+                    onClick={() => handleReset(account)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 px-3 py-2 text-sky-300 hover:bg-sky-500/10 disabled:cursor-not-allowed disabled:opacity-40">
+                    <KeyRound className="h-4 w-4" />{busyId === account.user_id ? "Resetting..." : "Reset password"}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {loading && <p className="p-5 text-sm text-slate-400">Loading accounts...</p>}
+        {!loading && filtered.length === 0 && <p className="p-5 text-sm text-slate-400">No matching accounts.</p>}
+      </div>
+    </section>
+  );
+}
+
 // ================================================
 // ADMIN DASHBOARD
 // ================================================
@@ -569,6 +660,7 @@ export default function AdminDashboard({
   onApproveTicket,
   onRejectTicket,
   onCreateUser,
+  onResetUserPassword,
   onLogout,
 }) {
   const [view, setView] =
@@ -660,6 +752,11 @@ export default function AdminDashboard({
       "Monitor every ticket across the support system.";
   }
 
+  if (view === "accounts") {
+    pageTitle = "Account Management";
+    pageDescription = "View usernames and securely reset account passwords.";
+  }
+
   // --------------------------------
   // RENDER
   // --------------------------------
@@ -739,6 +836,10 @@ export default function AdminDashboard({
               All Tickets
             </button>
 
+            <button type="button" onClick={() => setView("accounts")}
+              className={`flex items-center rounded-lg px-3 py-2 text-sm ${view === "accounts" ? "bg-sky-500/10 font-semibold text-sky-400" : "text-slate-300 hover:bg-slate-800"}`}>
+              <Users className="mr-1.5 h-4 w-4" />Accounts
+            </button>
             <button
               type="button"
               onClick={onCreateUser}
@@ -797,6 +898,15 @@ export default function AdminDashboard({
             {pageDescription}
           </p>
         </div>
+
+        <div className="mb-5 flex flex-wrap gap-2 md:hidden">
+          {[["dashboard", "Dashboard"], ["inbox", "Inbox"], ["tickets", "All Tickets"], ["accounts", "Accounts"]].map(([id, label]) => (
+            <button key={id} type="button" onClick={() => setView(id)}
+              className={`rounded-lg px-3 py-2 text-sm ${view === id ? "bg-sky-600 text-white" : "bg-slate-800 text-slate-300"}`}>{label}</button>
+          ))}
+          <button type="button" onClick={onCreateUser} className="rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-300">Create User</button>
+        </div>
+        {view === "accounts" && <AccountManagement onResetUserPassword={onResetUserPassword} currentUserId={user?.user_id} />}
 
         {/* ==================================
             DASHBOARD

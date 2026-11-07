@@ -54,7 +54,17 @@ class SetPasswordResponse(BaseModel):
 
 class SetPasswordRequest(BaseModel):
     user_id: int
-    new_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8, max_length=72)
+    first_name: str = Field(min_length=1, max_length=255)
+    last_name: str = Field(min_length=1, max_length=255)
+
+
+class AdminPasswordResetResponse(BaseModel):
+    user_id: int
+    email: EmailStr
+    temporary_password: str
+    message: str = "Temporary password issued. Copy it now; it will not be shown again."
+
 
 
 # =====================================================

@@ -1,4 +1,5 @@
 from typing import List, Optional
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -64,3 +65,25 @@ def get_user(user_id: int, db: Session = Depends(get_db), current_user: models.U
         )
 
     return user
+
+@router.post("/{user_id}/reset-password", response_model=schemas.AdminPasswordResetResponse)
+def reset_user_password(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("admin")),
+):
+    """Admin issues a one-time-display temporary credential. Password hashes are never shown."""
+    user = db.get(models.User, user_id)
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found.")
+    if user.user_id == current_user.user_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot reset your own password from Account Management.")
+    temp_password = secrets.token_urlsafe(18)
+    user.password_hash = security.hash_password(temp_password)
+    user.must_change_password = True
+    db.commit()
+    return schemas.AdminPasswordResetResponse(
+        user_id=user.user_id,
+        email=user.email,
+        temporary_password=temp_password,
+    )

@@ -40,6 +40,12 @@ def set_password(payload: schemas.SetPasswordRequest, db: Session = Depends(get_
             detail="User not found.",
         )
 
+    # Name confirmation is an additional check, NOT proof of identity.
+    # The user must already have authenticated with their temporary password.
+    if (payload.first_name.strip().casefold() != user.first_name.strip().casefold() or
+            payload.last_name.strip().casefold() != user.last_name.strip().casefold()):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "First and last name do not match this account.")
+
     user.password_hash = security.hash_password(payload.new_password)
     user.must_change_password = False
 

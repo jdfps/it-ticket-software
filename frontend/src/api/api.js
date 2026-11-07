@@ -47,13 +47,15 @@ export function login(email, password)
     });
 }
 
-export function setPassword(userId, newPassword)
+export function setPassword(userId, newPassword, firstName, lastName)
 {
     return request("/auth/set-password", {
         method: "PUT",
         body: JSON.stringify({
             user_id: userId,
             new_password: newPassword,
+            first_name: firstName,
+            last_name: lastName,
         }),
     });
 }
@@ -76,6 +78,10 @@ export function getUsers(role = null)
     return request(`/users${query}`);
 }
 
+
+export function resetUserPassword(userId) {
+    return request(`/users/${userId}/reset-password`, { method: "POST" });
+}
 
 // CATEGORIES
 

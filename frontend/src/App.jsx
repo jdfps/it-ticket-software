@@ -25,6 +25,7 @@ import {
   setPassword,
   createUser,
   getUsers,
+  resetUserPassword,
   getCategories,
   createTicket,
   getTickets,
@@ -673,7 +674,7 @@ export default function App() {
   // ================================================
 
   const handlePasswordSet =
-    async (newPassword) => {
+    async (newPassword, firstName, lastName) => {
       if (!currentUser) {
         throw new Error(
           "No user is currently signed in."
@@ -683,7 +684,9 @@ export default function App() {
       const response =
         await setPassword(
           currentUser.user_id,
-          newPassword
+          newPassword,
+          firstName,
+          lastName
         );
 
       saveToken(response.access_token);
@@ -1027,6 +1030,7 @@ export default function App() {
         onAddComment={
           handleAddComment
         }
+        onResetUserPassword={resetUserPassword}
         onCreateUser={() =>
           setCurrentPage(
             "create-user"
