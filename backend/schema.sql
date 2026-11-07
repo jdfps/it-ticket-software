@@ -37,6 +37,14 @@ CREATE TABLE users
 );
 
 
+-- Setup is a single-use operation. This marker remains even if users are removed.
+CREATE TABLE installation_state (
+    id INT PRIMARY KEY,
+    initialized BOOLEAN NOT NULL DEFAULT FALSE
+);
+INSERT INTO installation_state (id, initialized) VALUES (1, FALSE);
+
+
 -- =========================================================
 -- CATEGORIES
 -- Categories employees can select when creating tickets
@@ -72,6 +80,9 @@ CREATE TABLE tickets
     title VARCHAR(255) NOT NULL,
 
     description TEXT NOT NULL,
+
+    -- A short user-supplied label only when the selected category is Other
+    other_category VARCHAR(100) NULL,
 
 
     -- =====================================================

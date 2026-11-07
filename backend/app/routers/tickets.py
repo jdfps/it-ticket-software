@@ -36,11 +36,19 @@ def create_ticket(payload: schemas.TicketCreate, db: Session = Depends(get_db)):
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found.")
 
+    is_other = category.category_name.strip().casefold() == "other"
+    other_category = (payload.other_category or "").strip()
+    if is_other and not other_category:
+        raise HTTPException(status_code=422, detail="Please describe the Other category.")
+    if not is_other and other_category:
+        raise HTTPException(status_code=422, detail="Other category text is only allowed for the Other category.")
+
     ticket = models.Ticket(
         user_id=payload.user_id,
         category_id=payload.category_id,
         title=payload.title.strip(),
         description=payload.description.strip(),
+        other_category=other_category if is_other else None,
         status="pending",
     )
 

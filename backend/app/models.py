@@ -74,6 +74,7 @@ class Ticket(Base):
 
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
+    other_category = Column(String(100), nullable=True)
 
     status = Column(
         Enum("pending", "open", "in_progress", "resolved", "rejected", name="ticket_status"),
@@ -120,3 +121,10 @@ class Comment(Base):
 
     ticket = relationship("Ticket", back_populates="comments")
     author = relationship("User", back_populates="comments")
+
+class InstallationState(Base):
+    """Single-row record that keeps setup closed even if users are later deleted."""
+    __tablename__ = "installation_state"
+
+    id = Column(Integer, primary_key=True)
+    initialized = Column(Boolean, nullable=False, default=False)

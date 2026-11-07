@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import Login from "./pages/Login";
+import InitialSetup from "./pages/InitialSetup";
 import SetPassword from "./pages/SetPassword";
 import UserDashboard from "./pages/UserDashboard";
 import TechnicianDashboard from "./pages/TechnicianDashboard";
@@ -15,6 +16,8 @@ import CreateUser from "./pages/CreateUser";
 
 import {
   login,
+  getSetupStatus,
+  initializeCompanyAdmin,
   setPassword,
   createUser,
   getUsers,
@@ -145,6 +148,35 @@ export default function App() {
   const lastActivityRef = useRef(
     Date.now()
   );
+
+  // A fresh installation gets a one-time setup screen before login.
+  const [setupStatus, setSetupStatus] = useState("checking");
+  const [setupError, setSetupError] = useState("");
+  const [setupKeyConfigured, setSetupKeyConfigured] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getSetupStatus()
+      .then((data) => {
+        if (!active) return;
+        setSetupKeyConfigured(data.setup_key_configured);
+        setSetupStatus(data.setup_required ? "required" : "complete");
+      })
+      .catch(() => {
+        if (active) {
+          setSetupStatus("error");
+          setSetupError("Unable to connect to the server. Check the backend and refresh.");
+        }
+      });
+    return () => { active = false; };
+  }, []);
+
+  const handleInitialSetup = async (data) => {
+    await initializeCompanyAdmin(data);
+    setSetupStatus("complete");
+    setCurrentUser(null);
+    setCurrentPage("login");
+  };
 
   // ================================================
   // SAVE CURRENT USER
@@ -844,6 +876,18 @@ export default function App() {
 
       await loadTickets(false);
     };
+
+  if (setupStatus === "checking") {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100">Connecting to IT Ticket System...</div>;
+  }
+
+  if (setupStatus === "error") {
+    return <div role="alert" className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-rose-300">{setupError}</div>;
+  }
+
+  if (setupStatus === "required") {
+    return <InitialSetup onInitialize={handleInitialSetup} keyConfigured={setupKeyConfigured} />;
+  }
 
   // ================================================
   // LOGIN SCREEN

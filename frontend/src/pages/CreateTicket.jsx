@@ -24,10 +24,13 @@ export default function CreateSupportTicket({
   const [form, setForm] = useState({
     title: "",
     category: "",
+    otherCategory: "",
     description: "",
   });
 
   const [categories, setCategories] = useState([]);
+  const selectedCategory = categories.find((item) => String(item.category_id) === form.category);
+  const isOtherCategory = selectedCategory?.category_name?.trim().toLowerCase() === "other";
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -108,6 +111,22 @@ export default function CreateSupportTicket({
         "Please select a category.";
     }
 
+    if (isOtherCategory && !form.otherCategory.trim()) {
+      newErrors.otherCategory = "Please describe the category.";
+    }
+
+    if (form.otherCategory.trim().length > 100) {
+      newErrors.otherCategory = "Use 100 characters or fewer.";
+    }
+
+    if (form.title.trim().length > 255) {
+      newErrors.title = "Use 255 characters or fewer.";
+    }
+
+    if (form.description.trim().length > 10000) {
+      newErrors.description = "Use 10,000 characters or fewer.";
+    }
+
     if (!form.description.trim()) {
       newErrors.description =
         "Please describe the issue you are experiencing.";
@@ -137,6 +156,7 @@ export default function CreateSupportTicket({
       await onSubmitTicket({
         user_id: user.user_id,
         category_id: Number(form.category),
+        other_category: isOtherCategory ? form.otherCategory.trim() : null,
         title: form.title.trim(),
         description: form.description.trim(),
       });
@@ -322,6 +342,7 @@ export default function CreateSupportTicket({
 
                 <input
                   id="title"
+                  maxLength={255}
                   name="title"
                   type="text"
                   value={form.title}
@@ -407,6 +428,27 @@ export default function CreateSupportTicket({
                 </p>
               )}
             </div>
+
+            {isOtherCategory && (
+              <div>
+                <label htmlFor="otherCategory" className="mb-2 block text-sm font-medium text-slate-200">
+                  What type of issue? <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  id="otherCategory"
+                  name="otherCategory"
+                  type="text"
+                  maxLength={100}
+                  value={form.otherCategory}
+                  onChange={handleChange}
+                  placeholder="Example: Conference room equipment"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none focus:border-sky-400"
+                />
+                {errors.otherCategory && (
+                  <p className="mt-2 text-xs text-rose-400">{errors.otherCategory}</p>
+                )}
+              </div>
+            )}
 
             {/* DESCRIPTION */}
             <div>

@@ -178,3 +178,15 @@ export function createComment(
         }),
     });
 }
+
+// FIRST-TIME COMPANY SETUP
+export function getSetupStatus() {
+    return request("/setup/status");
+}
+
+export function initializeCompanyAdmin(data) {
+    return request("/setup/initialize", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+}

@@ -2,8 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app import models
+from app.database import SessionLocal
+
 from app.database import engine
-from app.routers import auth, users, tickets, comments, categories
+from app.routers import auth, users, tickets, comments, categories, setup
 
 app = FastAPI(title="IT Ticket Software API")
 
@@ -20,6 +23,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+def prepare_installation_state():
+    # Safe for existing databases: create ONLY the new installation_state table.
+    # No drop/rebuild of users, tickets, or other application data.
+    models.InstallationState.__table__.create(bind=engine, checkfirst=True)
+    with engine.begin() as conn:
+        conn.execute(text("INSERT IGNORE INTO installation_state (id, initialized) VALUES (1, FALSE)"))
+        # Existing installations are already initialized: never let removal
+        # of the original users reopen public first-time setup.
+        conn.execute(text("UPDATE installation_state SET initialized = TRUE WHERE id = 1 AND EXISTS (SELECT 1 FROM users LIMIT 1)"))
+
+
+app.include_router(setup.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(tickets.router)
@@ -38,8 +54,8 @@ def root():
                 "msg": "Database connected successfully",
             }
 
-    except Exception as e:
+    except Exception:
         return {
             "status": "error",
-            "msg": str(e),
+            "msg": "Database unavailable",
         }
