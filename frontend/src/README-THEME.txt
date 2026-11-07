@@ -1,0 +1,1 @@
+Replace frontend/src/App.jsx, main.jsx, index.css, and add ThemeToggle.jsx. Replace corresponding files in frontend/src/pages and frontend/src/api only if you want this full uploaded snapshot. No backend changes. Theme is saved in localStorage. Toggle appears at bottom right.
