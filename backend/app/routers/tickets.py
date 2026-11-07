@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
+from app.authentication import require_roles, can_view_ticket
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -23,8 +24,10 @@ def _get_ticket_or_404(ticket_id: int, db: Session) -> models.Ticket:
 
 
 @router.post("", response_model=schemas.TicketOut, status_code=status.HTTP_201_CREATED)
-def create_ticket(payload: schemas.TicketCreate, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.user_id == payload.user_id).first()
+def create_ticket(payload: schemas.TicketCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_roles("employee"))):
+    if payload.user_id != current_user.user_id:
+        raise HTTPException(403, "Cannot create a ticket for another user.")
+    user = current_user
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
@@ -65,8 +68,13 @@ def list_tickets(
     user_id: Optional[int] = None,
     tech_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("admin", "technician", "employee")),
 ):
     query = db.query(models.Ticket)
+    if current_user.role == "employee":
+        query = query.filter(models.Ticket.user_id == current_user.user_id)
+    elif current_user.role == "technician":
+        query = query.filter(models.Ticket.status.in_(["open", "in_progress", "resolved"]))
 
     if ticket_status:
         query = query.filter(models.Ticket.status == ticket_status)
@@ -79,8 +87,11 @@ def list_tickets(
 
 
 @router.get("/{ticket_id}", response_model=schemas.TicketOut)
-def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
-    return _get_ticket_or_404(ticket_id, db)
+def get_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_roles("admin", "technician", "employee"))):
+    ticket = _get_ticket_or_404(ticket_id, db)
+    if not can_view_ticket(current_user, ticket):
+        raise HTTPException(403, "Access denied.")
+    return ticket
 
 
 @router.patch("/{ticket_id}/approve", response_model=schemas.TicketOut)
@@ -88,6 +99,7 @@ def approve_ticket(
     ticket_id: int,
     payload: schemas.TicketApprove,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("admin")),
 ):
     ticket = _get_ticket_or_404(ticket_id, db)
 
@@ -110,7 +122,7 @@ def approve_ticket(
 
 
 @router.patch("/{ticket_id}/reject", response_model=schemas.TicketOut)
-def reject_ticket(ticket_id: int, db: Session = Depends(get_db)):
+def reject_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_roles("admin"))):
     ticket = _get_ticket_or_404(ticket_id, db)
 
     if ticket.status != "pending":
@@ -132,8 +144,11 @@ def claim_ticket(
     ticket_id: int,
     payload: schemas.TicketClaim,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("technician")),
 ):
     ticket = _get_ticket_or_404(ticket_id, db)
+    if payload.tech_id != current_user.user_id:
+        raise HTTPException(403, "Cannot claim a ticket as another technician.")
 
     technician = (
         db.query(models.User)
@@ -166,10 +181,11 @@ def resolve_ticket(
     ticket_id: int,
     payload: schemas.TicketResolve,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("technician")),
 ):
     ticket = _get_ticket_or_404(ticket_id, db)
 
-    if ticket.tech_id != payload.tech_id:
+    if ticket.tech_id != current_user.user_id or payload.tech_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the assigned technician can resolve this ticket.",

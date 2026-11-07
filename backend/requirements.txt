@@ -5,3 +5,4 @@ pymysql
 sqlalchemy
 bcrypt
 email-validator
+itsdangerous>=2.2,<3

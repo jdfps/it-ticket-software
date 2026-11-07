@@ -1,4 +1,9 @@
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const TOKEN_KEY = "cloudItDeskAccessToken";
+export const saveToken = (token) => sessionStorage.setItem(TOKEN_KEY, token);
+export const clearToken = () => sessionStorage.removeItem(TOKEN_KEY);
+export const hasToken = () => Boolean(sessionStorage.getItem(TOKEN_KEY));
+export const getCurrentUser = () => request("/auth/me");
 
 async function request(endpoint, options = {})
 {
@@ -6,10 +11,16 @@ async function request(endpoint, options = {})
         ...options,
         headers: {
             "Content-Type": "application/json",
+            ...(sessionStorage.getItem(TOKEN_KEY) ? { Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY)}` } : {}),
             ...options.headers,
         },
     });
 
+    if (response.status === 401 && endpoint !== "/auth/login") {
+        clearToken();
+        sessionStorage.removeItem("cloudItDeskUser");
+        window.dispatchEvent(new Event("it-ticket-session-expired"));
+    }
     if (!response.ok)
     {
         const error = await response.json().catch(() => null);

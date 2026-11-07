@@ -16,6 +16,10 @@ import CreateUser from "./pages/CreateUser";
 
 import {
   login,
+  saveToken,
+  clearToken,
+  hasToken,
+  getCurrentUser,
   getSetupStatus,
   initializeCompanyAdmin,
   setPassword,
@@ -81,7 +85,7 @@ function getSavedUser() {
       return null;
     }
 
-    return JSON.parse(savedUser);
+    return hasToken() ? JSON.parse(savedUser) : null;
   } catch {
     sessionStorage.removeItem(
       SESSION_USER_KEY
@@ -171,6 +175,21 @@ export default function App() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    const onExpired = () => {
+      clearToken();
+      sessionStorage.removeItem(SESSION_USER_KEY);
+      setCurrentUser(null);
+      setTickets([]);
+      setCurrentPage("login");
+    };
+    window.addEventListener("it-ticket-session-expired", onExpired);
+    if (hasToken()) {
+      getCurrentUser().then((user) => setCurrentUser(mapUser(user))).catch(onExpired);
+    }
+    return () => window.removeEventListener("it-ticket-session-expired", onExpired);
+  }, []);
+
   const handleInitialSetup = async (data) => {
     await initializeCompanyAdmin(data);
     setSetupStatus("complete");
@@ -242,6 +261,7 @@ export default function App() {
       sessionStorage.removeItem(
         SESSION_USER_KEY
       );
+      clearToken();
 
       setCurrentUser(null);
       setTickets([]);
@@ -599,6 +619,7 @@ export default function App() {
           credentials.password
         );
 
+      saveToken(response.access_token);
       const loggedInUser =
         mapUser(
           response.user
@@ -665,8 +686,9 @@ export default function App() {
           newPassword
         );
 
+      saveToken(response.access_token);
       const updatedUser =
-        mapUser(response);
+        mapUser(response.user);
 
       setCurrentUser(
         updatedUser

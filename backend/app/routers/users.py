@@ -5,12 +5,13 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas, security
 from app.database import get_db
+from app.authentication import require_roles
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.post("", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
-def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_roles("admin"))):
     email = payload.email.strip().lower()
 
     existing = db.query(models.User).filter(models.User.email == email).first()
@@ -37,9 +38,13 @@ def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=List[schemas.UserOut])
-def list_users(role: Optional[str] = None, db: Session = Depends(get_db)):
+def list_users(role: Optional[str] = None, db: Session = Depends(get_db), current_user: models.User = Depends(require_roles("admin", "technician", "employee"))):
     query = db.query(models.User)
 
+    if current_user.role == "employee":
+        query = query.filter(models.User.user_id == current_user.user_id)
+    elif current_user.role == "technician":
+        query = query.filter(models.User.role.in_(["technician", "employee"]))
     if role:
         query = query.filter(models.User.role == role)
 
@@ -47,7 +52,9 @@ def list_users(role: Optional[str] = None, db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}", response_model=schemas.UserOut)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_roles("admin", "technician", "employee"))):
+    if current_user.role == "employee" and user_id != current_user.user_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied.")
     user = db.query(models.User).filter(models.User.user_id == user_id).first()
 
     if not user:
